@@ -1,0 +1,2 @@
+- run server: `yarn backend-dev`
+- run client: `yarn frontend-dev`

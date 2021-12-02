@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "types": [
+      "svelte",
+      "jest"
+    ]
+  },
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "include": [
+    "client/**/*",
+    "shared/**/*",
+    "server/**/*",
+    "src/node_modules",
+    "svelte.d.ts"
+  ],
+  "exclude": ["node_modules/*", "__sapper__/*", "public/*"]
+}

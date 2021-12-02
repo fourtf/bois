@@ -1,0 +1,7 @@
+{
+  "watch": ["server/**/*.ts", "shared/**/*.ts"],
+  "ignore": ".git",
+  "execMap": {
+    "ts": "ts-node"
+  }
+}
