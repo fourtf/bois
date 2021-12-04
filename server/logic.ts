@@ -12,10 +12,18 @@ import {
 import {
   getCardsById,
   getCellsByCoordKey,
+  ifMap,
   removeRandom,
   uniqueStrings,
 } from "../shared/util";
-import { allCards, Card, cardsById, rotateCard } from "./cards";
+import {
+  allCards,
+  Card,
+  cardsById,
+  getClaimPositions,
+  getConnector,
+  rotateCard,
+} from "./cards";
 import { defaultGameData, GameData } from "./common";
 
 export function processMessage(
@@ -91,7 +99,7 @@ export function processMessage(
       game.state = {
         type: "place-boi",
         coord,
-        spots: cardsById[game.state.cardId].spots,
+        claimPositions: getClaimPositions(cardsById[game.state.cardId]),
       };
 
       return;
@@ -115,14 +123,13 @@ export function processMessage(
     case "place-boi": {
       assertInState(game.state.type, "place-boi");
       const coord = game.state.coord;
-      const spot = msg.spot;
 
       let cell = game.cells.find((cell) =>
         cell.coord.x === coord.x &&
         cell.coord.y === coord.y
       );
       if (cell) {
-        cell.boiSpot = spot;
+        cell.boiSpot = msg.claimPosition.position;
       }
 
       endTurn();
@@ -197,13 +204,13 @@ export function getPlaceablePositions(
 
       return (
         (leftCard === undefined ||
-          leftCard.connectors.right === card.connectors.left) &&
+          getConnector(leftCard, "right") === getConnector(card, "left")) &&
         (rightCard === undefined ||
-          rightCard.connectors.left === card.connectors.right) &&
+          getConnector(rightCard, "left") === getConnector(card, "right")) &&
         (topCard === undefined ||
-          topCard.connectors.bottom === card.connectors.top) &&
+          getConnector(topCard, "bottom") === getConnector(card, "top")) &&
         (bottomCard === undefined ||
-          bottomCard.connectors.top === card.connectors.bottom)
+          getConnector(bottomCard, "top") === getConnector(card, "bottom"))
       );
     })
     .map(parseCoordKey);
@@ -218,9 +225,3 @@ export function assertInState<Expected extends State["type"]>(
   }
 }
 
-function ifMap<T>(
-  x: T | undefined,
-  f: (x: T) => T,
-): T | undefined {
-  return x === undefined ? undefined : f(x);
-}

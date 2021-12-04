@@ -38,3 +38,14 @@ export function firstValue<V>(
 ): V {
   return Object.values(obj)[0];
 }
+
+export function ifMap<T, U>(
+  x: T | undefined,
+  f: (x: T) => U,
+): U | undefined {
+  return x === undefined ? undefined : f(x);
+}
+
+export function maybeToArray<T>(x: T | undefined): T[] {
+  return x === undefined ? [] : [x];
+}

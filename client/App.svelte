@@ -152,13 +152,8 @@
                 <!-- BOI -->
                 {#if cell.boiSpot}
                     <BoiComponent
-                        spot={cell.boiSpot}
+                        claimPosition={{ position: cell.boiSpot, type: "lawn" }}
                         style="position: absolute"
-                        on:click={() =>
-                            sendMessage({
-                                type: "place-boi",
-                                spot: cell.boiSpot,
-                            })}
                     />
                 {/if}
             </CellComponent>
@@ -188,14 +183,13 @@
                     cellOffset}px; width: {cellSize}px; height: {cellSize}px"
             >
                 <!-- BOIS -->
-                {#each objectEntries(game.state.spots) as [spot, connector]}
+                {#each game.state.claimPositions as claimPosition}
                     <BoiComponent
-                        {spot}
-                        {connector}
+                        {claimPosition}
                         on:click={() =>
                             sendMessage({
                                 type: "place-boi",
-                                spot,
+                                claimPosition,
                             })}
                     />
                 {/each}
