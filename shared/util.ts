@@ -38,3 +38,13 @@ export function firstValue<V>(
 ): V {
   return Object.values(obj)[0];
 }
+
+export function removeIf<T>(
+  array: T[],
+  predicate: (item: T) => boolean,
+) {
+  let index = array.findIndex(predicate);
+  if (index >= 0) {
+    array.splice(index, 1);
+  }
+}

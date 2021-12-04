@@ -38,8 +38,8 @@ export interface Game {
   cardCount?: number;
 }
 
-export function hasGameStarted(game: Game): boolean {
-  return game.state.type !== "not-started";
+export function hasGameStarted(state: State): boolean {
+  return state.type !== "not-started";
 }
 
 export interface Player {
