@@ -1,4 +1,4 @@
-import type { Connectors, Spots } from "../shared/shared";
+import type { Connectors, Rotation, Spots } from "../shared/shared";
 
 export interface Card {
   id: string;
@@ -43,3 +43,11 @@ export const cardsById: { [id: string]: Card } = allCards.reduce(
   },
   {} as { [id: string]: Card },
 );
+
+export function rotateCard(card: Card, delta: Rotation): Card {
+  for (let i = 0; i < delta / 90; i++) {
+    // TODO
+  }
+
+  return card;
+}

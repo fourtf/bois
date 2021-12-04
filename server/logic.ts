@@ -6,6 +6,7 @@ import {
   Coordinate,
   newCoordKey,
   parseCoordKey,
+  Rotation,
   State,
 } from "../shared/shared";
 import {
@@ -14,13 +15,15 @@ import {
   removeRandom,
   uniqueStrings,
 } from "../shared/util";
-import { allCards, Card, cardsById } from "./cards";
-import type { GameData } from "./common";
+import { allCards, Card, cardsById, rotateCard } from "./cards";
+import { defaultGameData, GameData } from "./common";
 
 export function processMessage(
-  { game, cardsLeft }: GameData,
+  gameData: GameData,
   msg: ClientGameMessage | ClientMessage,
 ) {
+  const { game, cardsLeft } = gameData;
+
   function endTurn() {
     if (cardsLeft.length === 0) {
       game.state = { type: "game-ended" };
@@ -39,6 +42,20 @@ export function processMessage(
     case "new-game": {
       assertInState(game.state.type, "game-ended");
       game.state = { type: "not-started" };
+
+      Object.assign(
+        gameData,
+        <GameData> {
+          ...defaultGameData(),
+          game: {
+            ...defaultGameData().game,
+            players: game.players,
+          },
+          playerData: gameData.playerData,
+          spectatorData: gameData.spectatorData,
+        },
+      );
+
       return;
     }
 
@@ -54,12 +71,14 @@ export function processMessage(
       game.state = {
         type: "play-card",
         cardId,
+        cardRotation: 0,
         coords: getPlaceablePositions(game.cells, card),
       };
       game.cardCount = cardsLeft.length;
 
       return;
     }
+
     case "play-card": {
       assertInState(game.state.type, "play-card");
 
@@ -77,6 +96,22 @@ export function processMessage(
 
       return;
     }
+
+    case "rotate-card": {
+      assertInState(game.state.type, "play-card");
+
+      const rotation = ((game.state.cardRotation + 90) % 360) as Rotation;
+      const card = rotateCard(cardsById[game.state.cardId], rotation);
+
+      game.state.cardRotation = rotation;
+      game.state.coords = getPlaceablePositions(
+        game.cells,
+        card,
+      );
+
+      return;
+    }
+
     case "place-boi": {
       assertInState(game.state.type, "place-boi");
       const coord = game.state.coord;
@@ -93,12 +128,14 @@ export function processMessage(
       endTurn();
       return;
     }
+
     case "skip-placing-boi": {
       assertInState(game.state.type, "place-boi");
 
       endTurn();
       return;
     }
+
     default: {
       throw new Error("Unknown message type");
     }
@@ -133,24 +170,40 @@ export function getPlaceablePositions(
 
   return coordKeys.filter((coordKey) => cellsByCoordKey[coordKey] === undefined)
     .filter((coordKey) => {
-      const leftCard =
-        cardsById[cellsByCoordKey[addToCoordKey(coordKey, -1, 0)]?.cardId];
-      const rightCard =
-        cardsById[cellsByCoordKey[addToCoordKey(coordKey, +1, 0)]?.cardId];
-      const upCard =
-        cardsById[cellsByCoordKey[addToCoordKey(coordKey, 0, -1)]?.cardId];
-      const downCard =
-        cardsById[cellsByCoordKey[addToCoordKey(coordKey, 0, +1)]?.cardId];
+      const rotateCard_ = (rotation: Rotation) =>
+        (card: Card) => rotateCard(card, rotation);
+
+      const leftCell = cellsByCoordKey[addToCoordKey(coordKey, -1, 0)];
+      const rightCell = cellsByCoordKey[addToCoordKey(coordKey, 1, 0)];
+      const topCell = cellsByCoordKey[addToCoordKey(coordKey, 0, -1)];
+      const bottomCell = cellsByCoordKey[addToCoordKey(coordKey, 0, 1)];
+
+      const leftCard = ifMap(
+        cardsById[leftCell?.cardId],
+        rotateCard_(leftCell?.rotation ?? 0),
+      );
+      const rightCard = ifMap(
+        cardsById[rightCell?.cardId],
+        rotateCard_(rightCell?.rotation ?? 0),
+      );
+      const topCard = ifMap(
+        cardsById[topCell?.cardId],
+        rotateCard_(topCell?.rotation ?? 0),
+      );
+      const bottomCard = ifMap(
+        cardsById[bottomCell?.cardId],
+        rotateCard_(bottomCell?.rotation ?? 0),
+      );
 
       return (
         (leftCard === undefined ||
           leftCard.connectors.right === card.connectors.left) &&
         (rightCard === undefined ||
           rightCard.connectors.left === card.connectors.right) &&
-        (upCard === undefined ||
-          upCard.connectors.bottom === card.connectors.top) &&
-        (downCard === undefined ||
-          downCard.connectors.top === card.connectors.bottom)
+        (topCard === undefined ||
+          topCard.connectors.bottom === card.connectors.top) &&
+        (bottomCard === undefined ||
+          bottomCard.connectors.top === card.connectors.bottom)
       );
     })
     .map(parseCoordKey);
@@ -163,4 +216,11 @@ export function assertInState<Expected extends State["type"]>(
   if (s !== expected) {
     throw new Error(`Expected ${s} to equal ${expected}`);
   }
+}
+
+function ifMap<T>(
+  x: T | undefined,
+  f: (x: T) => T,
+): T | undefined {
+  return x === undefined ? undefined : f(x);
 }

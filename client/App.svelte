@@ -60,7 +60,7 @@
 </script>
 
 <svelte:head>
-    <title>Karka</title>
+    <title>Bois</title>
 </svelte:head>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -92,12 +92,19 @@
                 >
                     Draw Card
                 </button>
+                <button
+                    disabled={game.state.type !== "play-card"}
+                    on:click={() => sendMessage({ type: "rotate-card" })}
+                >
+                    Rotate Card
+                </button>
                 {#if game.state.type === "play-card"}
                     <span>
                         Current Card:
                         <CardComponent
                             cardId={game.state.cardId}
                             size={cellSize}
+                            rotation={game.state.cardRotation}
                         />
                     </span>
                 {/if}

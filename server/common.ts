@@ -1,14 +1,17 @@
-import { Game, hasGameStarted } from "../shared/shared";
+import { CoordinateKey, Game, hasGameStarted } from "../shared/shared";
 import { v4 as uuidv4 } from "uuid";
 import type WebSocket from "ws";
+import type { Card } from "./cards";
 
 export interface GameData {
   game: Game;
-  cardsLeft: { id: string }[];
 
   // extra info that can't be in the game object since it gets sent to the user
   playerData: Record<string, PlayerData>;
   spectatorData: Record<string, SpectatorData>;
+
+  cardsLeft: { id: string }[];
+  cardAtCoord: Record<CoordinateKey, Card>;
 }
 
 export interface PlayerData {
@@ -39,6 +42,7 @@ export function defaultGameData(): GameData {
     ],
     playerData: {},
     spectatorData: {},
+    cardAtCoord: {},
   };
 }
 

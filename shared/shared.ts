@@ -10,15 +10,22 @@ export const wsUrl = `ws://localhost:${wsPort}`;
 export interface Cell {
   cardId: string;
   coord: Coordinate;
+  rotation?: Rotation;
   boiSpot?: SpotPosition;
 }
 
 export type Point = { x: number; y: number };
+export type Rotation = 0 | 90 | 180 | 270;
 
 export type State =
   | { type: "not-started" }
   | { type: "draw-card" }
-  | { type: "play-card"; cardId: string; coords: Coordinate[] }
+  | {
+    type: "play-card";
+    cardId: string;
+    cardRotation: Rotation;
+    coords: Coordinate[];
+  }
   | { type: "place-boi"; coord: Coordinate; spots: Spots }
   | { type: "game-ended" };
 
@@ -59,6 +66,7 @@ export type ClientGameMessage =
   | { type: "new-game" }
   | { type: "draw-card" }
   | { type: "play-card"; coord: Coordinate }
+  | { type: "rotate-card" }
   | { type: "place-boi"; spot: SpotPosition }
   | { type: "skip-placing-boi" };
 
