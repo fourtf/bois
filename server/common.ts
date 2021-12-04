@@ -11,7 +11,6 @@ export interface GameData {
   spectatorData: Record<string, SpectatorData>;
 
   cardsLeft: { id: string }[];
-  cardAtCoord: Record<CoordinateKey, Card>;
 }
 
 export interface PlayerData {
@@ -42,7 +41,6 @@ export function defaultGameData(): GameData {
     ],
     playerData: {},
     spectatorData: {},
-    cardAtCoord: {},
   };
 }
 
