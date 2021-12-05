@@ -8,21 +8,19 @@ export function getCardImage(cardId: string): string {
   return `/images/images-${cardId}.png`;
 }
 
-export function makeReconnectingWebSocket(
-  {
-    url,
-    protocols,
-    onopen,
-    onmessage,
-    onclose: onclose_,
-  }: {
-    url: string;
-    protocols?: string | string[];
-    onopen?: WebSocket["onopen"];
-    onmessage?: WebSocket["onmessage"];
-    onclose?: WebSocket["onclose"];
-  },
-): () => WebSocket {
+export function makeReconnectingWebSocket({
+  url,
+  protocols,
+  onopen,
+  onmessage,
+  onclose: onclose_,
+}: {
+  url: string;
+  protocols?: string | string[];
+  onopen?: WebSocket["onopen"];
+  onmessage?: WebSocket["onmessage"];
+  onclose?: WebSocket["onclose"];
+}): () => WebSocket {
   let ws: WebSocket;
 
   function retry() {

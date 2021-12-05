@@ -7,7 +7,9 @@
     "frontend-dev": "rollup -c -w",
     "frontend-start": "sirv public --no-clear",
     "backend-dev": "nodemon server/server.ts",
-    "test": "jest"
+    "test": "jest",
+    "check-format": "prettier --check \"{client,public,server,shared}/**/*.{ts,json,svelte,css,html}\"",
+    "format": "prettier --write \"{client,public,server,shared}/**/*.{ts,json,svelte,css,html}\""
   },
   "devDependencies": {
     "@babel/core": "^7.16.0",
@@ -22,6 +24,8 @@
     "babel-jest": "^27.3.1",
     "jest": "^27.3.1",
     "nodemon": "^2.0.15",
+    "prettier": "^2.5.1",
+    "prettier-plugin-svelte": "^2.5.0",
     "rollup": "^2.60.0",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-livereload": "^2.0.5",

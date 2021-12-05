@@ -55,7 +55,15 @@ export interface ClaimPos {
 }
 
 export type CellConnection = "top" | "bottom" | "left" | "right";
-export type LawnConnection = "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "leftTop" | "leftBottom" | "rightTop" | "rightBottom";
+export type LawnConnection =
+  | "topLeft"
+  | "topRight"
+  | "bottomLeft"
+  | "bottomRight"
+  | "leftTop"
+  | "leftBottom"
+  | "rightTop"
+  | "rightBottom";
 export type CityEffect = "coatOfArms" | "cathedral";
 export type StreetEffect = "guesthouse";
 
