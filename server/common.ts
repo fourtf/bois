@@ -12,7 +12,7 @@ export type ServerCell = {
   card: Card;
   coord: Coordinate;
   rotation?: Rotation;
-  boiSpot?: ClaimPos;
+  claimedPos?: ClaimPos;
 };
 
 export type ServerPlayer = Player & {

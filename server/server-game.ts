@@ -1,5 +1,6 @@
 import {
   Cell,
+  ClaimPos,
   Coordinate,
   CoordinateKey,
   Game,
@@ -7,12 +8,11 @@ import {
   newCoordKey,
   Player,
   Rotation,
-  SpotPosition,
   State,
 } from "../shared/shared";
 import { v4 as uuidv4 } from "uuid";
 import type WebSocket from "ws";
-import { allCards, Card, rotateCard } from "./cards";
+import { allCards, Card, getClaimPositions, rotateCard } from "./cards";
 import { removeIf, removeRandom } from "../shared/util";
 import { getPlaceablePositions } from "./logic";
 import {
@@ -40,14 +40,11 @@ export class ServerGame {
       assertInState(this.state.type, "game-ended");
     }
 
-    this.cells = cells.reduce(
-      (cells, { card, coord, rotation }) => {
-        const cell = { card, coord, rotation };
-        cells[newCoordKey(coord)] = cell;
-        return cells;
-      },
-      {} as Record<CoordinateKey, ServerCell>,
-    );
+    this.cells = cells.reduce((cells, { card, coord, rotation }) => {
+      const cell = { card, coord, rotation };
+      cells[newCoordKey(coord)] = cell;
+      return cells;
+    }, {} as Record<CoordinateKey, ServerCell>);
     this.cardsLeft = cards;
     this.state = { type: "not-started" };
   }
@@ -81,7 +78,7 @@ export class ServerGame {
     this.state = {
       type: "place-boi",
       coord,
-      spots: this.cardToPlay.spots,
+      claimPositions: getClaimPositions(this.cardToPlay),
     };
     this.cardToPlay = undefined;
   }
@@ -97,12 +94,12 @@ export class ServerGame {
     this.cardToPlay = card;
   }
 
-  placeBoi(spot: SpotPosition) {
+  placeBoi(pos: ClaimPos) {
     assertInState(this.state.type, "place-boi");
 
     let cell = this.cells[newCoordKey(this.state.coord)];
     if (cell) {
-      cell.boiSpot = spot;
+      cell.claimedPos = pos;
     }
 
     this.endTurn();
@@ -148,13 +145,15 @@ export function liftServerGame(sg: ServerGame): Game {
         coord,
         rotation,
         // TODO: boiSpot
-      }),
+      })
     ),
-    players: sg.players.map(({ id, name, score }): Player => ({
-      id,
-      name,
-      score,
-    })),
+    players: sg.players.map(
+      ({ id, name, score }): Player => ({
+        id,
+        name,
+        score,
+      })
+    ),
     cardCount: sg.cardsLeft.length,
   };
 }
