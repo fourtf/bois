@@ -11,7 +11,7 @@ export interface Cell {
   cardId: string;
   coord: Coordinate;
   rotation?: Rotation;
-  boiSpot?: [number, number];
+  claimPos?: ClaimPos;
 }
 
 export type Point = { x: number; y: number };
@@ -26,7 +26,12 @@ export type State =
       cardRotation: Rotation;
       coords: Coordinate[];
     }
-  | { type: "place-boi"; coord: Coordinate; claimPositions: ClaimPos[] }
+  | {
+      type: "place-boi";
+      coord: Coordinate;
+      claimPositions: ClaimPos[];
+      rotation: Rotation;
+    }
   | { type: "game-ended" };
 
 export type StateTypes = State["type"];
@@ -35,7 +40,8 @@ export interface Game {
   state: State;
   cells: Cell[];
   players: Player[];
-  cardCount?: number;
+  spectatorCount: number;
+  cardCount: number;
 }
 
 export function hasGameStarted(state: State): boolean {
@@ -46,6 +52,9 @@ export interface Player {
   id: string;
   name: string;
   score: number;
+  isConnected: boolean;
+  isHost: boolean;
+  isTheirTurn: boolean;
 }
 
 export type ClaimType = "city" | "street" | "lawn" | "monastery";
@@ -68,7 +77,13 @@ export type CityEffect = "coatOfArms" | "cathedral";
 export type StreetEffect = "guesthouse";
 
 // MESSAGES
-export type ClientMessage = ClientGameMessage;
+export type ClientMessage = ClientLobbyMessage | ClientGameMessage;
+
+export type ClientLobbyMessage =
+  // | { type: "join-as-spectator" }
+  | { type: "join-game" }
+  | { type: "leave-game" }
+  | { type: "try-rejoin-game"; id: string };
 
 export type ClientGameMessage =
   | { type: "start-game" }
@@ -76,10 +91,11 @@ export type ClientGameMessage =
   | { type: "draw-card" }
   | { type: "play-card"; coord: Coordinate }
   | { type: "rotate-card" }
-  | { type: "place-boi"; claimPosition: ClaimPos }
+  | { type: "place-boi"; claimPos: ClaimPos }
   | { type: "skip-placing-boi" };
 
-export type ServerMessage = {
-  type: "game-updated";
-  game: Game;
-};
+export type ServerMessage =
+  | { type: "game-updated"; game: Game }
+  | { type: "client-updated"; playerId?: string | undefined };
+
+export const STATUS_STOP_RECONNECTING = 901;

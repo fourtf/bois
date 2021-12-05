@@ -2,17 +2,17 @@
   import type { ClaimPos } from "../../shared/shared";
   import { boiSize, cellSize } from "../common";
 
-  export let claimPosition: ClaimPos;
+  export let claimPos: ClaimPos;
   export let style: string = "";
 
-  $: x = Math.floor(claimPosition.position[0] * cellSize);
-  $: y = Math.floor(claimPosition.position[1] * cellSize);
+  $: x = Math.floor(claimPos.position[0] * cellSize - boiSize / 2);
+  $: y = Math.floor(claimPos.position[1] * cellSize - boiSize / 2);
 </script>
 
 <img
   src="/images/boi.png"
   alt="boi"
-  style="position: absolute; margin: {y}px 0 0 {x}px; width: {boiSize}px; height: {boiSize}px; outline-color: {claimPosition.type ===
+  style="position: absolute; margin: {y}px 0 0 {x}px; width: {boiSize}px; height: {boiSize}px; outline-color: {claimPos.type ===
   'lawn'
     ? 'green'
     : 'red'}; {style}"

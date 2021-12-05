@@ -9,6 +9,7 @@ import {
   Player,
   Rotation,
   State,
+  STATUS_STOP_RECONNECTING,
 } from "../shared/shared";
 import { v4 as uuidv4 } from "uuid";
 import type WebSocket from "ws";
@@ -19,19 +20,21 @@ import {
   assertInState,
   ServerCell,
   ServerPlayer,
-  ServerSpectator,
+  ServerClient,
 } from "./common";
 
 export class ServerGame {
   cells: Record<CoordinateKey, ServerCell> = {};
   state: State = { type: "not-started" };
   players: ServerPlayer[] = [];
-  spectators: ServerSpectator[] = [];
+  clients: ServerClient[] = [];
   cardsLeft: Card[] = [];
   cardToPlay?: Card;
+  currentPlayerIndex: number = 0;
 
   startGame() {
     assertInState(this.state.type, "not-started");
+    this.currentPlayerIndex = 0;
     this.state = { type: "draw-card" };
   }
 
@@ -45,7 +48,7 @@ export class ServerGame {
       cells[newCoordKey(coord)] = cell;
       return cells;
     }, {} as Record<CoordinateKey, ServerCell>);
-    this.cardsLeft = cards;
+    this.cardsLeft = [...cards];
     this.state = { type: "not-started" };
   }
 
@@ -70,6 +73,10 @@ export class ServerGame {
     assertInState(this.state.type, "play-card");
     const card = this.cardToPlay ?? allCards[0];
 
+    if (!this.state.coords.find((c) => c.x === coord.x && c.y === coord.y)) {
+      throw new Error("Invalid coordinate");
+    }
+
     this.cells[newCoordKey(coord)] = {
       card,
       coord,
@@ -79,6 +86,7 @@ export class ServerGame {
       type: "place-boi",
       coord,
       claimPositions: getClaimPositions(this.cardToPlay),
+      rotation: this.state.cardRotation,
     };
     this.cardToPlay = undefined;
   }
@@ -87,7 +95,7 @@ export class ServerGame {
     assertInState(this.state.type, "play-card");
 
     const rotation = ((this.state.cardRotation + 90) % 360) as Rotation;
-    const card = rotateCard(this.cardToPlay ?? allCards[0], rotation);
+    const card = rotateCard(this.cardToPlay ?? allCards[0], 90);
 
     this.state.cardRotation = rotation;
     this.state.coords = getPlaceablePositions(this.cells, card);
@@ -99,7 +107,7 @@ export class ServerGame {
 
     let cell = this.cells[newCoordKey(this.state.coord)];
     if (cell) {
-      cell.claimedPos = pos;
+      cell.claimPos = pos;
     }
 
     this.endTurn();
@@ -113,26 +121,79 @@ export class ServerGame {
     } else {
       this.state = { type: "draw-card" };
     }
+
+    this.currentPlayerIndex =
+      (this.currentPlayerIndex + 1) % this.players.length;
+  }
+
+  get currentPlayer(): ServerPlayer | null {
+    return this.players[this.currentPlayerIndex] ?? null;
+  }
+
+  get host(): ServerPlayer | null {
+    return this.players[this.currentPlayerIndex] ?? null;
   }
 
   /**
    * @returns id of the added player/spectator
    */
-  addPlayerOrSpectator(ws: WebSocket): string {
-    const id = uuidv4();
-
-    if (hasGameStarted(this.state)) {
-      this.players.push({ id, ws, name: "player" + id.substr(0, 6), score: 0 });
-    } else {
-      this.spectators.push({ id, ws });
-    }
-
-    return id;
+  addClient(ws: WebSocket) {
+    this.clients.push({ ws });
   }
 
-  removePlayerOrSpectator(id: string) {
-    removeIf(this.players, ({ id: playerId }) => playerId === id);
-    removeIf(this.spectators, ({ id: spectatorId }) => spectatorId === id);
+  removeClient(ws: WebSocket) {
+    removeIf(this.clients, (c) => c.ws === ws);
+
+    // player
+    if (hasGameStarted(this.state)) {
+      const player = this.players.find(({ ws: playerWs }) => playerWs === ws);
+      if (player) {
+        player.isConnected = false;
+      }
+    } else {
+      removeIf(this.players, ({ ws: playerWs }) => playerWs === ws);
+    }
+  }
+
+  joinGame(ws: WebSocket): string {
+    if (!hasGameStarted(this.state)) {
+      const id = uuidv4();
+      const client = this.clients.find((s) => s.ws === ws);
+      if (client) {
+        const player: ServerPlayer = {
+          id,
+          ws: client.ws,
+          isConnected: true,
+          score: 0,
+          name: "player-" + id.slice(0, 4),
+        };
+        this.players.push(player);
+        return id;
+      }
+
+      throw new Error("Client not found");
+    }
+
+    throw new Error("Game already started");
+  }
+
+  rejoinGame(ws: WebSocket, id: string): boolean {
+    const player = this.players.find((p) => p.id === id);
+
+    if (player) {
+      player.ws.close(STATUS_STOP_RECONNECTING);
+      player.ws = ws;
+      player.isConnected = true;
+      return true;
+    }
+
+    return false;
+  }
+
+  leaveGame(ws: WebSocket) {
+    if (!hasGameStarted(this.state)) {
+      removeIf(this.players, ({ ws: playerWs }) => playerWs === ws);
+    }
   }
 }
 
@@ -140,20 +201,26 @@ export function liftServerGame(sg: ServerGame): Game {
   return {
     state: sg.state,
     cells: Object.values(sg.cells).map(
-      ({ card, coord, rotation }): Cell => ({
+      ({ card, coord, rotation, claimPos }): Cell => ({
         cardId: card.id,
         coord,
         rotation,
-        // TODO: boiSpot
+        claimPos,
       })
     ),
     players: sg.players.map(
-      ({ id, name, score }): Player => ({
+      ({ id, name, score, isConnected }): Player => ({
         id,
         name,
         score,
+        isConnected,
+        isHost: sg.host.id === id,
+        isTheirTurn:
+          sg.currentPlayerIndex === sg.players.findIndex((p) => p.id === id),
       })
     ),
     cardCount: sg.cardsLeft.length,
+    spectatorCount:
+      sg.clients.length - sg.players.filter((x) => x.isConnected).length,
   };
 }

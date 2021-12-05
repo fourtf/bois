@@ -9,6 +9,7 @@ import type {
   StreetEffect,
 } from "../shared/shared";
 import { ifMap as mapMaybe, maybeToArray } from "../shared/util";
+import type { ServerCell } from "./common";
 
 export interface Card {
   id: string;
@@ -375,9 +376,92 @@ export const cardsById: { [id: string]: Card } = allCards.reduce(
   {} as { [id: string]: Card }
 );
 
+export const baseSet = {
+  cells: <ServerCell>{ card: cardsById["001"], coord: { x: 0, y: 0 } },
+  cards: [
+    cardsById["000"],
+    cardsById["000"],
+    cardsById["000"],
+    cardsById["001"],
+  ],
+};
+
 export function rotateCard(card: Card, delta: Rotation): Card {
+  function roundClaimPos(claimPos: [number, number]): [number, number] {
+    return [
+      Math.round(claimPos[0] * 100) / 100,
+      Math.round(claimPos[1] * 100) / 100,
+    ];
+  }
+
   for (let i = 0; i < delta / 90; i++) {
-    // TODO
+    card = {
+      id: card.id,
+      cities: card.cities?.map((city) => ({
+        // claimPos: roundClaimPos([city.claimPos[1], 1 - city.claimPos[0]]),
+        claimPos: city.claimPos,
+        connections: city.connections.map((connection) =>
+          connection === "top"
+            ? "right"
+            : connection === "right"
+            ? "bottom"
+            : connection === "bottom"
+            ? "left"
+            : connection === "left"
+            ? "top"
+            : connection
+        ),
+      })),
+      streets: card.streets?.map((street) => ({
+        // claimPos: roundClaimPos([street.claimPos[1], 1 - street.claimPos[0]]),
+        claimPos: street.claimPos,
+        connections: street.connections.map((connection) =>
+          connection === "top"
+            ? "right"
+            : connection === "right"
+            ? "bottom"
+            : connection === "bottom"
+            ? "left"
+            : connection === "left"
+            ? "top"
+            : connection
+        ),
+      })),
+      lawns: card.lawns?.map((lawn) => ({
+        // claimPos: roundClaimPos([lawn.claimPos[1], 1 - lawn.claimPos[0]]),
+        claimPos: lawn.claimPos,
+        connections: lawn.connections.map((connection) =>
+          connection === "topLeft"
+            ? "rightTop"
+            : connection === "topRight"
+            ? "rightBottom"
+            : connection === "bottomLeft"
+            ? "leftTop"
+            : connection === "bottomRight"
+            ? "leftBottom"
+            : connection === "rightTop"
+            ? "bottomRight"
+            : connection === "rightBottom"
+            ? "bottomLeft"
+            : connection === "leftTop"
+            ? "topRight"
+            : connection === "leftBottom"
+            ? "topLeft"
+            : connection
+        ),
+      })),
+      ...(card.monastery
+        ? {
+            monastery: {
+              // claimPos: [
+              //   card.monastery.claimPos[1],
+              //   1 - card.monastery.claimPos[0],
+              // ],
+              claimPos: card.monastery.claimPos,
+            },
+          }
+        : {}),
+    };
   }
 
   return card;

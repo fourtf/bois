@@ -1,73 +1,53 @@
-import { CoordinateKey, newCoordKey, State } from "../shared/shared";
-import { firstKey } from "../shared/util";
-import type { Card } from "./cards";
-import { assertInState, ServerCell } from "./common";
-import { getPlaceablePositions, processMessage } from "./logic";
+import type { State } from "../shared/shared";
+import { assertInState } from "./common";
+import { processMessage } from "./logic";
 import { ServerGame } from "./server-game";
+import { defaultCards, defaultCells, llll, llsl } from "./tests";
 
-const testCards: Card[] = [
-  {
-    id: "llsl",
-    streets: [{ claimPos: [0.5, 0.8], connections: ["bottom"] }],
-    lawns: [
-      {
-        claimPos: [0.2, 0.2],
-        connections: [
-          "topLeft",
-          "topRight",
-          "bottomLeft",
-          "bottomRight",
-          "leftTop",
-          "leftBottom",
-          "rightTop",
-          "rightBottom",
-        ],
-      },
-    ],
-    monastery: { claimPos: [0.5, 0.5] },
-  },
-  {
-    id: "llll",
-    lawns: [
-      {
-        claimPos: [0.2, 0.2],
-        connections: [
-          "topLeft",
-          "topRight",
-          "bottomLeft",
-          "bottomRight",
-          "leftTop",
-          "leftBottom",
-          "rightTop",
-          "rightBottom",
-        ],
-      },
-    ],
-  },
-  {
-    id: "ssss",
-    streets: [
-      { claimPos: [0.5, 0.2], connections: ["top"] },
-      { claimPos: [0.2, 0.5], connections: ["left"] },
-      { claimPos: [0.8, 0.5], connections: ["right"] },
-      { claimPos: [0.5, 0.8], connections: ["bottom"] },
-    ],
-    lawns: [
-      { claimPos: [0.2, 0.2], connections: ["topLeft", "leftTop"] },
-      { claimPos: [0.8, 0.2], connections: ["topRight", "rightTop"] },
-      { claimPos: [0.2, 0.8], connections: ["bottomLeft", "leftBottom"] },
-      { claimPos: [0.8, 0.8], connections: ["bottomRight", "rightBottom"] },
-    ],
-  },
-];
+test("simple game logic", () => {
+  const sg = new ServerGame();
 
-const defaultCells: ServerCell[] = [
-  { card: testCards[1], coord: { x: 0, y: 0 } },
-  { card: testCards[1], coord: { x: 1, y: 0 } },
-  { card: testCards[1], coord: { x: 2, y: 0 } },
-  { card: testCards[0], coord: { x: 0, y: 1 } },
-];
-const defaultCards: Card[] = [testCards[1], testCards[0], testCards[0]];
+  sg.newGame(defaultCells, [llll]);
+  sg.startGame();
+  sg.drawCard();
+  sg.playCard({ x: -1, y: 0 });
+  sg.endTurn();
+
+  expect(sg.state.type).toBe("game-ended");
+});
+
+test("illegal move test", () => {
+  const sg = new ServerGame();
+
+  sg.newGame([{ card: llll, coord: { x: 0, y: 0 } }], [llsl]);
+  sg.startGame();
+  sg.drawCard();
+  expect(() => sg.playCard({ x: 0, y: -1 })).toThrow();
+});
+
+test("illegal move test 2", () => {
+  const sg = new ServerGame();
+
+  sg.newGame([{ card: llll, coord: { x: 0, y: 0 } }], [llsl]);
+  sg.startGame();
+  sg.drawCard();
+  sg.rotateCard(); //
+  expect(() => sg.playCard({ x: 1, y: 0 })).toThrow();
+});
+
+test("rotation game logic", () => {
+  const sg = new ServerGame();
+
+  sg.newGame([{ card: llll, coord: { x: 0, y: 0 } }], [llsl, llsl]);
+  sg.startGame();
+  sg.drawCard();
+  sg.rotateCard();
+  sg.playCard({ x: -1, y: 0 });
+  sg.endTurn();
+  sg.drawCard();
+  sg.rotateCard();
+  expect(() => sg.playCard({ x: -2, y: 0 })).toThrow();
+});
 
 test("game logic", () => {
   const sg = new ServerGame();
@@ -99,7 +79,7 @@ test("game logic", () => {
     assertInState(state.type, "place-boi");
     processMessage(sg, {
       type: "place-boi",
-      claimPosition: state.claimPositions[0],
+      claimPos: state.claimPositions[0],
     });
   }
 
@@ -107,22 +87,4 @@ test("game logic", () => {
 
   state = sg.state;
   assertInState(state.type, "game-ended");
-});
-
-test("get placeable spots", () => {
-  // one card with a street on the bottom
-  const cells: Record<CoordinateKey, ServerCell> = {
-    [newCoordKey({ x: 0, y: 0 })]: {
-      card: testCards[0],
-      coord: { x: 0, y: 0 },
-    },
-  };
-  const card: Card = testCards.find((c) => c.id === "llsl");
-
-  const p = getPlaceablePositions(cells, card);
-
-  expect(p).toEqual([
-    { x: -1, y: 0 },
-    { x: 1, y: 0 },
-  ]);
 });

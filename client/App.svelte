@@ -5,6 +5,7 @@
     ServerMessage,
     wsUrl,
     Coordinate,
+    hasGameStarted,
   } from "../shared/shared";
   import BoiComponent from "./map/Boi.svelte";
   import CardComponent from "./map/Card.svelte";
@@ -13,16 +14,26 @@
     cellOffset,
     cellSize,
     makeReconnectingWebSocket,
+    playerIdStore,
     titleOfState,
   } from "./common";
 
   let game: Game | null = null;
+  let playerId: string | null = null;
   let mapOffset: Coordinate = { x: 300, y: 200 };
+
+  playerIdStore.subscribe((newPlayerId) => {
+    playerId = newPlayerId;
+  });
 
   let getWs = makeReconnectingWebSocket({
     url: wsUrl,
     protocols: "game-protocol",
     onopen: () => {
+      if (playerId) {
+        sendMessage({ type: "try-rejoin-game", id: playerId });
+      }
+
       console.log("Connected to server");
     },
     onmessage: (event) => {
@@ -32,6 +43,10 @@
       if (data.type === "game-updated") {
         game = data.game;
         console.log("Game received");
+      } else if (data.type === "client-updated") {
+        if (data.playerId) {
+          playerIdStore.set(data.playerId);
+        }
       }
     },
     onclose: () => {
@@ -72,6 +87,13 @@
 
       <div>
         <button
+          disabled={game.state.type !== "game-ended"}
+          on:click={() => sendMessage({ type: "new-game" })}
+        >
+          New Game
+        </button>
+
+        <button
           disabled={game.state.type !== "not-started"}
           on:click={() => sendMessage({ type: "start-game" })}
         >
@@ -79,11 +101,20 @@
         </button>
 
         <button
-          disabled={game.state.type !== "game-ended"}
-          on:click={() => sendMessage({ type: "new-game" })}
+          disabled={hasGameStarted(game.state)}
+          on:click={() => sendMessage({ type: "join-game" })}
         >
-          New Game
+          Join Game
         </button>
+
+        <button
+          disabled={hasGameStarted(game.state)}
+          on:click={() => sendMessage({ type: "leave-game" })}
+        >
+          Leave Game
+        </button>
+
+        <br />
 
         <button
           disabled={game.state.type !== "draw-card"}
@@ -122,12 +153,18 @@
         {/if}
       </div>
 
-      Players:
-      {#each game.players as player}
-        <div class="player">
-          {player.name} ({player.score} points)
-        </div>
-      {/each}
+      <div>
+        Players:
+        {#each game.players as player}
+          <div class="player">
+            {player.name} ({player.score} points) {#if !player.isConnected}(Disconnected){/if}
+          </div>
+        {/each}
+      </div>
+
+      <div>
+        Spectators: {game.spectatorCount}
+      </div>
     </div>
   </div>
 
@@ -137,7 +174,12 @@
   >
     <!-- CARDS -->
     {#each game.cells as cell}
-      <CellComponent coord={cell.coord} size={cellSize} offset={cellOffset}>
+      <CellComponent
+        coord={cell.coord}
+        size={cellSize}
+        offset={cellOffset}
+        rotation={cell.rotation}
+      >
         <CardComponent
           cardId={cell.cardId}
           size={cellSize}
@@ -145,11 +187,8 @@
         />
 
         <!-- BOI -->
-        {#if cell.boiSpot}
-          <BoiComponent
-            claimPosition={{ position: cell.boiSpot, type: "lawn" }}
-            style="position: absolute"
-          />
+        {#if cell.claimPos}
+          <BoiComponent claimPos={cell.claimPos} style="position: absolute" />
         {/if}
       </CellComponent>
     {/each}
@@ -172,23 +211,24 @@
 
     <!-- BOI CARD BORDER -->
     {#if game.state.type === "place-boi"}
-      <div
-        style="position: absolute; margin: {game.state.coord.y *
-          cellOffset}px 0 0 {game.state.coord.x *
-          cellOffset}px; width: {cellSize}px; height: {cellSize}px"
+      <CellComponent
+        coord={game.state.coord}
+        size={cellSize}
+        offset={cellOffset}
+        rotation={game.state.rotation}
       >
         <!-- BOIS -->
-        {#each game.state.claimPositions as claimPosition}
+        {#each game.state.claimPositions as claimPos}
           <BoiComponent
-            {claimPosition}
+            {claimPos}
             on:click={() =>
               sendMessage({
                 type: "place-boi",
-                claimPosition,
+                claimPos,
               })}
           />
         {/each}
-      </div>
+      </CellComponent>
     {/if}
   </div>
 {:else}

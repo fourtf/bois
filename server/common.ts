@@ -12,15 +12,18 @@ export type ServerCell = {
   card: Card;
   coord: Coordinate;
   rotation?: Rotation;
-  claimedPos?: ClaimPos;
+  claimPos?: ClaimPos;
 };
 
-export type ServerPlayer = Player & {
+export type ServerPlayer = {
+  id: string;
+  name: string;
+  score: number;
+  isConnected: boolean;
   ws: WebSocket;
 };
 
-export type ServerSpectator = {
-  id: string;
+export type ServerClient = {
   ws: WebSocket;
 };
 

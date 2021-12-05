@@ -1,4 +1,8 @@
-import type { StateTypes as StateType } from "../shared/shared";
+import {
+  StateTypes as StateType,
+  STATUS_STOP_RECONNECTING,
+} from "../shared/shared";
+import { localStorageWritable } from "./local-storage";
 
 export const cellSize = 100;
 export const cellOffset = 102;
@@ -29,8 +33,13 @@ export function makeReconnectingWebSocket({
     ws.onmessage = onmessage.bind(ws);
     const onClose = onclose_.bind(ws);
     ws.onclose = (ev) => {
-      setTimeout(retry, 5000);
       onClose(ev);
+
+      if (ev.code === STATUS_STOP_RECONNECTING) {
+        return;
+      }
+
+      setTimeout(retry, 5000);
     };
   }
 
@@ -46,3 +55,5 @@ export const titleOfState: { [type in StateType]: string } = {
   "place-boi": "Place a boi",
   "game-ended": "The game has ended",
 };
+
+export const playerIdStore = localStorageWritable("playerId", "");

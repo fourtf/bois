@@ -4,8 +4,10 @@ import express from "express";
 import { createServer } from "http";
 import { processMessage } from "./logic";
 import { liftServerGame, ServerGame } from "./server-game";
+import { baseSet } from "./cards";
 
 let sg = new ServerGame();
+sg.newGame([baseSet.cells], [...baseSet.cards]);
 
 const app = express();
 const server = createServer(app);
@@ -16,16 +18,44 @@ const wss = new WebSocket.Server({
 wss.on("connection", (ws: WebSocket) => {
   console.log("Client connected");
 
-  const id = sg.addPlayerOrSpectator(ws);
+  sg.addClient(ws);
 
   updateGame();
 
   ws.on("message", (message: string) => {
     console.log(`Client sent: ${message}`);
 
-    const msg: ClientMessage = JSON.parse(message);
     try {
-      processMessage(sg, msg);
+      const msg: ClientMessage = JSON.parse(message);
+      switch (msg.type) {
+        case "join-game":
+          const id = sg.joinGame(ws);
+
+          ws.send(
+            JSON.stringify(<ServerMessage>{
+              type: "client-updated",
+              playerId: id,
+            })
+          );
+          break;
+        case "leave-game":
+          sg.leaveGame(ws);
+          break;
+        case "try-rejoin-game":
+          if (sg.rejoinGame(ws, msg.id)) {
+            ws.send(
+              JSON.stringify(<ServerMessage>{
+                type: "client-updated",
+                playerId: msg.id,
+              })
+            );
+          }
+          break;
+        default:
+          if (sg.currentPlayer.ws === ws) {
+            processMessage(sg, msg);
+          }
+      }
       updateGame();
     } catch (e) {
       console.log(e);
@@ -35,7 +65,7 @@ wss.on("connection", (ws: WebSocket) => {
   ws.on("close", () => {
     console.log("Client disconnected");
 
-    sg.removePlayerOrSpectator(id);
+    sg.removeClient(ws);
     updateGame();
   });
 });
@@ -56,7 +86,7 @@ function updateGame() {
     ws.send(json);
   }
 
-  for (const { ws } of sg.spectators) {
+  for (const { ws } of sg.clients) {
     ws.send(json);
   }
 }

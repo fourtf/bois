@@ -9,14 +9,11 @@ import {
   Rotation,
 } from "../shared/shared";
 import { ifMap, uniqueStrings } from "../shared/util";
-import { allCards, Card, getConnector, rotateCard } from "./cards";
+import { allCards, baseSet, Card, getConnector, rotateCard } from "./cards";
 import type { ServerCell } from "./common";
 import type { ServerGame } from "./server-game";
 
-export function processMessage(
-  sg: ServerGame,
-  msg: ClientGameMessage | ClientMessage
-) {
+export function processMessage(sg: ServerGame, msg: ClientMessage) {
   switch (msg.type) {
     case "start-game": {
       sg.startGame();
@@ -24,7 +21,7 @@ export function processMessage(
     }
 
     case "new-game": {
-      sg.newGame([], [allCards[0], allCards[0], allCards[1]]);
+      sg.newGame([baseSet.cells], [...baseSet.cards]);
       return;
     }
 
@@ -44,7 +41,7 @@ export function processMessage(
     }
 
     case "place-boi": {
-      sg.placeBoi(msg.claimPosition);
+      sg.placeBoi(msg.claimPos);
       return;
     }
 
@@ -65,27 +62,10 @@ export function getPlaceablePositions(
 ): Coordinate[] {
   return getSurroundingCells(cells)
     .filter((coordKey) => {
-      const rotateCard_ = (rotation: Rotation) => (card: Card) =>
-        rotateCard(card, rotation);
-
-      const leftCell = cells[addToCoordKey(coordKey, -1, 0)];
-      const rightCell = cells[addToCoordKey(coordKey, 1, 0)];
-      const topCell = cells[addToCoordKey(coordKey, 0, -1)];
-      const bottomCell = cells[addToCoordKey(coordKey, 0, 1)];
-
-      const leftCard = ifMap(
-        leftCell?.card,
-        rotateCard_(leftCell?.rotation ?? 0)
-      );
-      const rightCard = ifMap(
-        rightCell?.card,
-        rotateCard_(rightCell?.rotation ?? 0)
-      );
-      const topCard = ifMap(topCell?.card, rotateCard_(topCell?.rotation ?? 0));
-      const bottomCard = ifMap(
-        bottomCell?.card,
-        rotateCard_(bottomCell?.rotation ?? 0)
-      );
+      const leftCard = cells[addToCoordKey(coordKey, -1, 0)]?.card;
+      const rightCard = cells[addToCoordKey(coordKey, 1, 0)]?.card;
+      const topCard = cells[addToCoordKey(coordKey, 0, -1)]?.card;
+      const bottomCard = cells[addToCoordKey(coordKey, 0, 1)]?.card;
 
       return (
         (leftCard === undefined ||
