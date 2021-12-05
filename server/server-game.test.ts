@@ -7,37 +7,60 @@ import { ServerGame } from "./server-game";
 
 const testCards: Card[] = [
   {
-    // lawn lawn street lawn
     id: "llsl",
-    connectors: {
-      "top": "lawn",
-      "right": "lawn",
-      "bottom": "street",
-      "left": "lawn",
-    },
-    spots: {},
+    streets: [{ claimPos: [0.5, 0.8], connections: ["bottom"] }],
+    lawns: [
+      {
+        claimPos: [0.2, 0.2],
+        connections: [
+          "topLeft",
+          "topRight",
+          "bottomLeft",
+          "bottomRight",
+          "leftTop",
+          "leftBottom",
+          "rightTop",
+          "rightBottom",
+        ],
+      },
+    ],
+    monastery: { claimPos: [0.5, 0.5] },
   },
   {
     id: "llll",
-    connectors: {
-      "top": "lawn",
-      "right": "lawn",
-      "bottom": "lawn",
-      "left": "lawn",
-    },
-    spots: {},
+    lawns: [
+      {
+        claimPos: [0.2, 0.2],
+        connections: [
+          "topLeft",
+          "topRight",
+          "bottomLeft",
+          "bottomRight",
+          "leftTop",
+          "leftBottom",
+          "rightTop",
+          "rightBottom",
+        ],
+      },
+    ],
   },
   {
     id: "ssss",
-    connectors: {
-      "top": "street",
-      "right": "street",
-      "bottom": "street",
-      "left": "street",
-    },
-    spots: {},
+    streets: [
+      { claimPos: [0.5, 0.2], connections: ["top"] },
+      { claimPos: [0.2, 0.5], connections: ["left"] },
+      { claimPos: [0.8, 0.5], connections: ["right"] },
+      { claimPos: [0.5, 0.8], connections: ["bottom"] },
+    ],
+    lawns: [
+      { claimPos: [0.2, 0.2], connections: ["topLeft", "leftTop"] },
+      { claimPos: [0.8, 0.2], connections: ["topRight", "rightTop"] },
+      { claimPos: [0.2, 0.8], connections: ["bottomLeft", "leftBottom"] },
+      { claimPos: [0.8, 0.8], connections: ["bottomRight", "rightBottom"] },
+    ],
   },
 ];
+
 const defaultCells: ServerCell[] = [
   { card: testCards[1], coord: { x: 0, y: 0 } },
   { card: testCards[1], coord: { x: 1, y: 0 } },
@@ -76,7 +99,7 @@ test("game logic", () => {
     assertInState(state.type, "place-boi");
     processMessage(sg, {
       type: "place-boi",
-      spot: firstKey(state.spots),
+      claimPosition: state.claimPositions[0],
     });
   }
 

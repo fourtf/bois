@@ -11,7 +11,7 @@ export interface Cell {
   cardId: string;
   coord: Coordinate;
   rotation?: Rotation;
-  boiSpot?: SpotPosition;
+  boiSpot?: [number, number];
 }
 
 export type Point = { x: number; y: number };
@@ -21,12 +21,12 @@ export type State =
   | { type: "not-started" }
   | { type: "draw-card" }
   | {
-    type: "play-card";
-    cardId: string;
-    cardRotation: Rotation;
-    coords: Coordinate[];
-  }
-  | { type: "place-boi"; coord: Coordinate; spots: Spots }
+      type: "play-card";
+      cardId: string;
+      cardRotation: Rotation;
+      coords: Coordinate[];
+    }
+  | { type: "place-boi"; coord: Coordinate; claimPositions: ClaimPos[] }
   | { type: "game-ended" };
 
 export type StateTypes = State["type"];
@@ -48,15 +48,16 @@ export interface Player {
   score: number;
 }
 
-// Spot in a cell where a boi can be placed
-export type SpotPosition = "top" | "bottom" | "left" | "right" | "center";
-export type SpotType = "street" | "lawn" | "special";
-export type Spots = { [key in SpotPosition]?: SpotType };
+export type ClaimType = "city" | "street" | "lawn" | "monastery";
+export interface ClaimPos {
+  type: ClaimType;
+  position: [number, number];
+}
 
-// A connection between two cells. E.g. a street at the top of a cell
-export type ConnectorSide = "top" | "bottom" | "left" | "right";
-export type ConnectorType = "street" | "lawn" | "special";
-export type Connectors = { [key in ConnectorSide]: ConnectorType };
+export type CellConnection = "top" | "bottom" | "left" | "right";
+export type LawnConnection = "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "leftTop" | "leftBottom" | "rightTop" | "rightBottom";
+export type CityEffect = "coatOfArms" | "cathedral";
+export type StreetEffect = "guesthouse";
 
 // MESSAGES
 export type ClientMessage = ClientGameMessage;
@@ -67,7 +68,7 @@ export type ClientGameMessage =
   | { type: "draw-card" }
   | { type: "play-card"; coord: Coordinate }
   | { type: "rotate-card" }
-  | { type: "place-boi"; spot: SpotPosition }
+  | { type: "place-boi"; claimPosition: ClaimPos }
   | { type: "skip-placing-boi" };
 
 export type ServerMessage = {

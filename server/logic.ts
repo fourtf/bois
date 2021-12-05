@@ -1,6 +1,5 @@
 import {
   addToCoordKey,
-  Cell,
   ClientGameMessage,
   ClientMessage,
   Coordinate,
@@ -8,21 +7,15 @@ import {
   newCoordKey,
   parseCoordKey,
   Rotation,
-  State,
 } from "../shared/shared";
-import {
-  getCardsById,
-  getCellsByCoordKey,
-  removeRandom,
-  uniqueStrings,
-} from "../shared/util";
-import { allCards, Card, cardsById, rotateCard } from "./cards";
+import { ifMap, uniqueStrings } from "../shared/util";
+import { allCards, Card, getConnector, rotateCard } from "./cards";
 import type { ServerCell } from "./common";
 import type { ServerGame } from "./server-game";
 
 export function processMessage(
   sg: ServerGame,
-  msg: ClientGameMessage | ClientMessage,
+  msg: ClientGameMessage | ClientMessage
 ) {
   switch (msg.type) {
     case "start-game": {
@@ -51,7 +44,7 @@ export function processMessage(
     }
 
     case "place-boi": {
-      sg.placeBoi(msg.spot);
+      sg.placeBoi(msg.claimPosition);
       return;
     }
 
@@ -68,12 +61,12 @@ export function processMessage(
 
 export function getPlaceablePositions(
   cells: Record<CoordinateKey, ServerCell>,
-  card: Card,
+  card: Card
 ): Coordinate[] {
   return getSurroundingCells(cells)
     .filter((coordKey) => {
-      const rotateCard_ = (rotation: Rotation) =>
-        (card: Card) => rotateCard(card, rotation);
+      const rotateCard_ = (rotation: Rotation) => (card: Card) =>
+        rotateCard(card, rotation);
 
       const leftCell = cells[addToCoordKey(coordKey, -1, 0)];
       const rightCell = cells[addToCoordKey(coordKey, 1, 0)];
@@ -82,37 +75,34 @@ export function getPlaceablePositions(
 
       const leftCard = ifMap(
         leftCell?.card,
-        rotateCard_(leftCell?.rotation ?? 0),
+        rotateCard_(leftCell?.rotation ?? 0)
       );
       const rightCard = ifMap(
         rightCell?.card,
-        rotateCard_(rightCell?.rotation ?? 0),
+        rotateCard_(rightCell?.rotation ?? 0)
       );
-      const topCard = ifMap(
-        topCell?.card,
-        rotateCard_(topCell?.rotation ?? 0),
-      );
+      const topCard = ifMap(topCell?.card, rotateCard_(topCell?.rotation ?? 0));
       const bottomCard = ifMap(
         bottomCell?.card,
-        rotateCard_(bottomCell?.rotation ?? 0),
+        rotateCard_(bottomCell?.rotation ?? 0)
       );
 
       return (
         (leftCard === undefined ||
-          leftCard.connectors.right === card.connectors.left) &&
+          getConnector(leftCard, "right") === getConnector(card, "left")) &&
         (rightCard === undefined ||
-          rightCard.connectors.left === card.connectors.right) &&
+          getConnector(rightCard, "left") === getConnector(card, "right")) &&
         (topCard === undefined ||
-          topCard.connectors.bottom === card.connectors.top) &&
+          getConnector(topCard, "bottom") === getConnector(card, "top")) &&
         (bottomCard === undefined ||
-          bottomCard.connectors.top === card.connectors.bottom)
+          getConnector(bottomCard, "top") === getConnector(card, "bottom"))
       );
     })
     .map(parseCoordKey);
 }
 
 function getSurroundingCells(
-  cells: Record<CoordinateKey, ServerCell>,
+  cells: Record<CoordinateKey, ServerCell>
 ): CoordinateKey[] {
   let x = uniqueStrings(
     Object.values(cells)
@@ -128,15 +118,8 @@ function getSurroundingCells(
       })
       .flat()
       .map(([x, y]) => newCoordKey(x, y))
-      .filter((coordKey) => cells[coordKey] === undefined),
+      .filter((coordKey) => cells[coordKey] === undefined)
   );
 
   return x;
-}
-
-function ifMap<T>(
-  x: T | undefined,
-  f: (x: T) => T,
-): T | undefined {
-  return x === undefined ? undefined : f(x);
 }

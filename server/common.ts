@@ -1,8 +1,8 @@
 import type {
+  ClaimPos,
   Coordinate,
   Player,
   Rotation,
-  SpotPosition,
   State,
 } from "../shared/shared";
 import type WebSocket from "ws";
@@ -12,7 +12,7 @@ export type ServerCell = {
   card: Card;
   coord: Coordinate;
   rotation?: Rotation;
-  boiSpot?: SpotPosition;
+  claimedPos?: ClaimPos;
 };
 
 export type ServerPlayer = Player & {
@@ -26,7 +26,7 @@ export type ServerSpectator = {
 
 export function assertInState<Expected extends State["type"]>(
   s: string,
-  expected: Expected,
+  expected: Expected
 ): asserts s is Expected {
   if (s !== expected) {
     throw new Error(`Expected ${s} to equal ${expected}`);
