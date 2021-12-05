@@ -8,6 +8,7 @@
     "frontend-start": "sirv public --no-clear",
     "backend-dev": "nodemon server/server.ts",
     "test": "jest",
+    "coverage": "jest --coverage --collectCoverageFrom=\"{client,public,server,shared}/**/*.ts\"",
     "check-format": "prettier --check \"{client,public,server,shared}/**/*.{ts,json,svelte,css,html}\"",
     "format": "prettier --write \"{client,public,server,shared}/**/*.{ts,json,svelte,css,html}\""
   },
