@@ -3,14 +3,9 @@ import WebSocket from "ws";
 import express from "express";
 import { createServer } from "http";
 import { processMessage } from "./logic";
-import {
-  addPlayerOrSpectator,
-  defaultGameData,
-  GameData,
-  removePlayerOrSpectator,
-} from "./common";
+import { liftServerGame, ServerGame } from "./server-game";
 
-let gameData: GameData = defaultGameData();
+let sg = new ServerGame();
 
 const app = express();
 const server = createServer(app);
@@ -21,7 +16,7 @@ const wss = new WebSocket.Server({
 wss.on("connection", (ws: WebSocket) => {
   console.log("Client connected");
 
-  const id = addPlayerOrSpectator(gameData, ws);
+  const id = sg.addPlayerOrSpectator(ws);
 
   updateGame();
 
@@ -30,7 +25,7 @@ wss.on("connection", (ws: WebSocket) => {
 
     const msg: ClientMessage = JSON.parse(message);
     try {
-      processMessage(gameData, msg);
+      processMessage(sg, msg);
       updateGame();
     } catch (e) {
       console.log(e);
@@ -40,7 +35,7 @@ wss.on("connection", (ws: WebSocket) => {
   ws.on("close", () => {
     console.log("Client disconnected");
 
-    removePlayerOrSpectator(gameData, id);
+    sg.removePlayerOrSpectator(id);
     updateGame();
   });
 });
@@ -52,15 +47,16 @@ server.listen(wsPort, () => {
 function updateGame() {
   const data: ServerMessage = {
     type: "game-updated",
-    game: gameData.game,
+    game: liftServerGame(sg),
   };
 
   const json = JSON.stringify(data);
 
-  for (const id in gameData.playerData) {
-    gameData.playerData[id].ws.send(json);
+  for (const { ws } of sg.players) {
+    ws.send(json);
   }
-  for (const id in gameData.spectatorData) {
-    gameData.spectatorData[id].ws.send(json);
+
+  for (const { ws } of sg.spectators) {
+    ws.send(json);
   }
 }

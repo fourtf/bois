@@ -23,9 +23,10 @@ export function uniqueStrings(array: string[]): string[] {
   return [...new Set(array).values()];
 }
 
-export function objectEntries<K extends string, V>(
-  obj: { [key in K]?: V },
-): [K, V][] {
+export function objectEntries<K extends string, V>(obj: { [key in K]?: V }): [
+  K,
+  V
+][] {
   return Object.entries(obj) as unknown as [K, V][];
 }
 
@@ -33,19 +34,21 @@ export function firstKey<K extends string>(obj: { [key in K]?: unknown }): K {
   return Object.keys(obj)[0] as K;
 }
 
-export function firstValue<V>(
-  obj: Record<string, V>,
-): V {
+export function firstValue<V>(obj: Record<string, V>): V {
   return Object.values(obj)[0];
 }
 
-export function ifMap<T, U>(
-  x: T | undefined,
-  f: (x: T) => U,
-): U | undefined {
+export function ifMap<T, U>(x: T | undefined, f: (x: T) => U): U | undefined {
   return x === undefined ? undefined : f(x);
 }
 
 export function maybeToArray<T>(x: T | undefined): T[] {
   return x === undefined ? [] : [x];
+}
+
+export function removeIf<T>(array: T[], predicate: (item: T) => boolean) {
+  let index = array.findIndex(predicate);
+  if (index >= 0) {
+    array.splice(index, 1);
+  }
 }

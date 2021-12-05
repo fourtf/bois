@@ -1,145 +1,55 @@
 import {
   addToCoordKey,
-  Cell,
   ClientGameMessage,
   ClientMessage,
   Coordinate,
+  CoordinateKey,
   newCoordKey,
   parseCoordKey,
   Rotation,
-  State,
 } from "../shared/shared";
-import {
-  getCardsById,
-  getCellsByCoordKey,
-  ifMap,
-  removeRandom,
-  uniqueStrings,
-} from "../shared/util";
-import {
-  allCards,
-  Card,
-  cardsById,
-  getClaimPositions,
-  getConnector,
-  rotateCard,
-} from "./cards";
-import { defaultGameData, GameData } from "./common";
+import { ifMap, uniqueStrings } from "../shared/util";
+import { allCards, Card, getConnector, rotateCard } from "./cards";
+import type { ServerCell } from "./common";
+import type { ServerGame } from "./server-game";
 
 export function processMessage(
-  gameData: GameData,
-  msg: ClientGameMessage | ClientMessage,
+  sg: ServerGame,
+  msg: ClientGameMessage | ClientMessage
 ) {
-  const { game, cardsLeft } = gameData;
-
-  function endTurn() {
-    if (cardsLeft.length === 0) {
-      game.state = { type: "game-ended" };
-    } else {
-      game.state = { type: "draw-card" };
-    }
-  }
-
   switch (msg.type) {
     case "start-game": {
-      assertInState(game.state.type, "not-started");
-      game.state = { type: "draw-card" };
+      sg.startGame();
       return;
     }
 
     case "new-game": {
-      assertInState(game.state.type, "game-ended");
-      game.state = { type: "not-started" };
-
-      Object.assign(
-        gameData,
-        <GameData> {
-          ...defaultGameData(),
-          game: {
-            ...defaultGameData().game,
-            players: game.players,
-          },
-          playerData: gameData.playerData,
-          spectatorData: gameData.spectatorData,
-        },
-      );
-
+      sg.newGame([], [allCards[0], allCards[0], allCards[1]]);
       return;
     }
 
     case "draw-card": {
-      assertInState(game.state.type, "draw-card");
-
-      const cardId = removeRandom(cardsLeft).id;
-      const card = cardsById[cardId];
-      if (card === undefined) {
-        throw new Error("Card not found");
-      }
-
-      game.state = {
-        type: "play-card",
-        cardId,
-        cardRotation: 0,
-        coords: getPlaceablePositions(game.cells, card),
-      };
-      game.cardCount = cardsLeft.length;
-
+      sg.drawCard();
       return;
     }
 
     case "play-card": {
-      assertInState(game.state.type, "play-card");
-
-      const coord = msg.coord;
-      game.cells.push({
-        cardId: game.state.cardId,
-        coord,
-      });
-
-      game.state = {
-        type: "place-boi",
-        coord,
-        claimPositions: getClaimPositions(cardsById[game.state.cardId]),
-      };
-
+      sg.playCard(msg.coord);
       return;
     }
 
     case "rotate-card": {
-      assertInState(game.state.type, "play-card");
-
-      const rotation = ((game.state.cardRotation + 90) % 360) as Rotation;
-      const card = rotateCard(cardsById[game.state.cardId], rotation);
-
-      game.state.cardRotation = rotation;
-      game.state.coords = getPlaceablePositions(
-        game.cells,
-        card,
-      );
-
+      sg.rotateCard();
       return;
     }
 
     case "place-boi": {
-      assertInState(game.state.type, "place-boi");
-      const coord = game.state.coord;
-
-      let cell = game.cells.find((cell) =>
-        cell.coord.x === coord.x &&
-        cell.coord.y === coord.y
-      );
-      if (cell) {
-        cell.boiSpot = msg.claimPosition.position;
-      }
-
-      endTurn();
+      sg.placeBoi(msg.claimPosition);
       return;
     }
 
     case "skip-placing-boi": {
-      assertInState(game.state.type, "place-boi");
-
-      endTurn();
+      sg.endTurn();
       return;
     }
 
@@ -150,56 +60,31 @@ export function processMessage(
 }
 
 export function getPlaceablePositions(
-  cells: Cell[],
-  card: Card,
-  test_allCards?: Card[],
+  cells: Record<CoordinateKey, ServerCell>,
+  card: Card
 ): Coordinate[] {
-  const cellsByCoordKey = getCellsByCoordKey(cells);
-  const cardsById = getCardsById(test_allCards ?? allCards);
-
-  // unique list of all coordinates that are not already occupied and where a
-  // card could be placed on
-  const coordKeys = uniqueStrings(
-    cells
-      .map((card) => {
-        const { x, y } = card.coord;
-
-        return [
-          [x - 1, y],
-          [x + 1, y],
-          [x, y - 1],
-          [x, y + 1],
-        ];
-      })
-      .flat()
-      .map(([x, y]) => newCoordKey(x, y)),
-  );
-
-  return coordKeys.filter((coordKey) => cellsByCoordKey[coordKey] === undefined)
+  return getSurroundingCells(cells)
     .filter((coordKey) => {
-      const rotateCard_ = (rotation: Rotation) =>
-        (card: Card) => rotateCard(card, rotation);
+      const rotateCard_ = (rotation: Rotation) => (card: Card) =>
+        rotateCard(card, rotation);
 
-      const leftCell = cellsByCoordKey[addToCoordKey(coordKey, -1, 0)];
-      const rightCell = cellsByCoordKey[addToCoordKey(coordKey, 1, 0)];
-      const topCell = cellsByCoordKey[addToCoordKey(coordKey, 0, -1)];
-      const bottomCell = cellsByCoordKey[addToCoordKey(coordKey, 0, 1)];
+      const leftCell = cells[addToCoordKey(coordKey, -1, 0)];
+      const rightCell = cells[addToCoordKey(coordKey, 1, 0)];
+      const topCell = cells[addToCoordKey(coordKey, 0, -1)];
+      const bottomCell = cells[addToCoordKey(coordKey, 0, 1)];
 
       const leftCard = ifMap(
-        cardsById[leftCell?.cardId],
-        rotateCard_(leftCell?.rotation ?? 0),
+        leftCell?.card,
+        rotateCard_(leftCell?.rotation ?? 0)
       );
       const rightCard = ifMap(
-        cardsById[rightCell?.cardId],
-        rotateCard_(rightCell?.rotation ?? 0),
+        rightCell?.card,
+        rotateCard_(rightCell?.rotation ?? 0)
       );
-      const topCard = ifMap(
-        cardsById[topCell?.cardId],
-        rotateCard_(topCell?.rotation ?? 0),
-      );
+      const topCard = ifMap(topCell?.card, rotateCard_(topCell?.rotation ?? 0));
       const bottomCard = ifMap(
-        cardsById[bottomCell?.cardId],
-        rotateCard_(bottomCell?.rotation ?? 0),
+        bottomCell?.card,
+        rotateCard_(bottomCell?.rotation ?? 0)
       );
 
       return (
@@ -216,12 +101,25 @@ export function getPlaceablePositions(
     .map(parseCoordKey);
 }
 
-export function assertInState<Expected extends State["type"]>(
-  s: string,
-  expected: Expected,
-): asserts s is Expected {
-  if (s !== expected) {
-    throw new Error(`Expected ${s} to equal ${expected}`);
-  }
-}
+function getSurroundingCells(
+  cells: Record<CoordinateKey, ServerCell>
+): CoordinateKey[] {
+  let x = uniqueStrings(
+    Object.values(cells)
+      .map((card) => {
+        const { x, y } = card.coord;
 
+        return [
+          [x - 1, y],
+          [x + 1, y],
+          [x, y - 1],
+          [x, y + 1],
+        ];
+      })
+      .flat()
+      .map(([x, y]) => newCoordKey(x, y))
+      .filter((coordKey) => cells[coordKey] === undefined)
+  );
+
+  return x;
+}
