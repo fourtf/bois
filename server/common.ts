@@ -8,6 +8,8 @@ import type {
 import type WebSocket from "ws";
 import type { Card } from "./cards";
 
+export const defaultBoiCount = 8;
+
 export type ServerCell = {
   card: Card;
   coord: Coordinate;
@@ -19,6 +21,7 @@ export type ServerPlayer = {
   id: string;
   name: string;
   score: number;
+  boisLeft: number;
   isConnected: boolean;
   ws: WebSocket;
 };

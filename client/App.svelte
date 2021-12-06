@@ -17,6 +17,7 @@
     playerIdStore,
     titleOfState,
   } from "./common";
+  import { fade } from "svelte/transition";
 
   let game: Game | null = null;
   let playerId: string | null = null;
@@ -60,17 +61,31 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    const offset = 150;
-    if (event.key === "ArrowLeft" || event.key === "a") {
-      mapOffset = { x: mapOffset.x + offset, y: mapOffset.y };
-    } else if (event.key === "ArrowRight" || event.key === "d") {
-      mapOffset = { x: mapOffset.x - offset, y: mapOffset.y };
-    } else if (event.key === "ArrowUp" || event.key === "w") {
-      mapOffset = { x: mapOffset.x, y: mapOffset.y + offset };
-    } else if (event.key === "ArrowDown" || event.key === "s") {
-      mapOffset = { x: mapOffset.x, y: mapOffset.y - offset };
-    } else if (/[rR]/.test(event.key)) {
+    if (/[rR]/.test(event.key)) {
       sendMessage({ type: "rotate-card" });
+    }
+  }
+
+  let isMovingMap = false;
+
+  function handleMouseDown(event: MouseEvent) {
+    if (event.target === document.body && event.buttons & 1) {
+      isMovingMap = true;
+    }
+  }
+
+  function handleMouseUp(event: MouseEvent) {
+    if (!(event.buttons & 1)) {
+      isMovingMap = false;
+    }
+  }
+
+  function handleMouseMove(event: MouseEvent) {
+    if (isMovingMap) {
+      mapOffset = {
+        x: mapOffset.x + event.movementX,
+        y: mapOffset.y + event.movementY,
+      };
     }
   }
 </script>
@@ -79,7 +94,12 @@
   <title>Bois</title>
 </svelte:head>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window
+  on:keydown={handleKeydown}
+  on:mousedown={handleMouseDown}
+  on:mouseup={handleMouseUp}
+  on:mousemove={handleMouseMove}
+/>
 
 {#if game}
   <!-- GAME INFO -->
@@ -138,7 +158,7 @@
             Skip Placing Boi
           </button>
 
-          WASD to move map.
+          Drag the left mouse to move map.
           {#if game.cardCount !== undefined}
             <span>
               Cards left: {game.cardCount}
@@ -161,7 +181,7 @@
         Players:
         {#each game.players as player}
           <div class="player">
-            {player.name} ({player.score} points) {#if !player.isConnected}(Disconnected){/if}
+            {player.name} ({player.score} points) (bois left: {player.boisLeft}) {#if !player.isConnected}(Disconnected){/if}
           </div>
         {/each}
       </div>
@@ -173,9 +193,7 @@
   </div>
 
   <!-- MAP -->
-  <div
-    style="position: absolute; margin: {mapOffset.y}px 0 0 {mapOffset.x}px; transition: margin 0.1s"
-  >
+  <div style="position: absolute; margin: {mapOffset.y}px 0 0 {mapOffset.x}px">
     <!-- CARDS -->
     {#each game.cells as cell}
       <CellComponent
@@ -203,18 +221,21 @@
 
     <!-- PLACEABLE POSITIONS -->
     {#if game.state.type === "play-card"}
-      {#each game.state.coords as coord}
-        <div
-          class="placeable"
-          style="margin: {coord.y * cellOffset}px 0 0 {coord.x *
-            cellOffset}px; width: {cellSize}px; height: {cellSize}px"
-          on:click={() =>
-            sendMessage({
-              type: "play-card",
-              coord,
-            })}
-        />
-      {/each}
+      {#key game.state.coords}
+        {#each game.state.coords as coord}
+          <div
+            transition:fade={{ duration: 100 }}
+            class="placeable"
+            style="margin: {coord.y * cellOffset}px 0 0 {coord.x *
+              cellOffset}px; width: {cellSize}px; height: {cellSize}px"
+            on:click={() =>
+              sendMessage({
+                type: "play-card",
+                coord,
+              })}
+          />
+        {/each}
+      {/key}
     {/if}
 
     <!-- BOI CARD BORDER -->

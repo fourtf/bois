@@ -52,6 +52,7 @@ export interface Player {
   id: string;
   name: string;
   score: number;
+  boisLeft: number;
   isConnected: boolean;
   isHost: boolean;
   isTheirTurn: boolean;

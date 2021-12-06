@@ -3,6 +3,7 @@ import { assertInState } from "./common";
 import { processMessage } from "./logic";
 import { ServerGame } from "./server-game";
 import { defaultCards, defaultCells, llll, llsl } from "./tests";
+import type WebSocket from "ws";
 
 test("simple game logic", () => {
   const sg = new ServerGame();
@@ -53,6 +54,9 @@ test("game logic", () => {
   const sg = new ServerGame();
   let state: State;
 
+  const wsMock = {} as WebSocket;
+  sg.addClient(wsMock);
+  sg.joinGame(wsMock);
   sg.newGame(defaultCells, defaultCards);
 
   state = sg.state;

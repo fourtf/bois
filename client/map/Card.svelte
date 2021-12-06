@@ -7,7 +7,9 @@
   export let rotation: number = 0;
 
   $: image = cardId ? getCardImage(cardId) : getImage("card-bg.png");
-  $: style_ = style + `; transform: rotate(${rotation}deg);`;
+  $: style_ =
+    style +
+    `; transition: transform 0.2s ease-in-out; transform: rotate(${rotation}deg);`;
 </script>
 
 <img src={image} alt={cardId} width={size} height={size} style={style_} />

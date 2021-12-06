@@ -21,6 +21,7 @@ import {
   ServerCell,
   ServerPlayer,
   ServerClient,
+  defaultBoiCount,
 } from "./common";
 
 export class ServerGame {
@@ -31,12 +32,6 @@ export class ServerGame {
   cardsLeft: Card[] = [];
   cardToPlay?: Card;
   currentPlayerIndex: number = 0;
-
-  startGame() {
-    assertInState(this.state.type, "not-started");
-    this.currentPlayerIndex = 0;
-    this.state = { type: "draw-card" };
-  }
 
   newGame(cells: ServerCell[], cards: Card[]) {
     if (this.cells.length) {
@@ -50,6 +45,16 @@ export class ServerGame {
     }, {} as Record<CoordinateKey, ServerCell>);
     this.cardsLeft = [...cards];
     this.state = { type: "not-started" };
+  }
+
+  startGame() {
+    assertInState(this.state.type, "not-started");
+    this.currentPlayerIndex = 0;
+    this.players.forEach((p) => {
+      p.score = 0;
+      p.boisLeft = defaultBoiCount;
+    });
+    this.state = { type: "draw-card" };
   }
 
   drawCard() {
@@ -104,6 +109,12 @@ export class ServerGame {
 
   placeBoi(pos: ClaimPos) {
     assertInState(this.state.type, "place-boi");
+
+    if (!this.currentPlayer?.boisLeft) {
+      throw new Error("No bois left");
+    }
+
+    this.currentPlayer.boisLeft--;
 
     let cell = this.cells[newCoordKey(this.state.coord)];
     if (cell) {
@@ -165,6 +176,7 @@ export class ServerGame {
           ws: client.ws,
           isConnected: true,
           score: 0,
+          boisLeft: 0,
           name: "player-" + id.slice(0, 4),
         };
         this.players.push(player);
@@ -209,11 +221,12 @@ export function liftServerGame(sg: ServerGame): Game {
       })
     ),
     players: sg.players.map(
-      ({ id, name, score, isConnected }): Player => ({
+      ({ id, name, score, boisLeft, isConnected }): Player => ({
         id,
         name,
         score,
         isConnected,
+        boisLeft,
         isHost: sg.host.id === id,
         isTheirTurn:
           sg.currentPlayerIndex === sg.players.findIndex((p) => p.id === id),
