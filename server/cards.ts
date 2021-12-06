@@ -8,7 +8,7 @@ import type {
   Rotation,
   StreetEffect,
 } from "../shared/shared";
-import { ifMap as mapMaybe, maybeToArray } from "../shared/util";
+import { ifMap as mapMaybe, maybeToArray, repeat } from "../shared/util";
 import type { ServerCell } from "./common";
 
 export interface Card {
@@ -377,13 +377,35 @@ export const cardsById: { [id: string]: Card } = allCards.reduce(
 );
 
 export const baseSet = {
-  cells: <ServerCell>{ card: cardsById["001"], coord: { x: 0, y: 0 } },
-  cards: [
-    cardsById["000"],
-    cardsById["000"],
-    cardsById["000"],
-    cardsById["001"],
-  ],
+  cells: <ServerCell>{ card: cardsById["003"], coord: { x: 0, y: 0 } },
+  cards: (<[string, number][]>[
+    ["000", 2],
+    ["001", 4],
+    ["002", 1],
+    ["003", 3], // only 3 since one is the starting card
+    ["004", 5],
+    ["005", 2],
+    ["006", 1],
+    ["007", 3],
+    ["008", 2],
+    ["009", 3],
+    ["010", 3],
+    ["011", 3],
+    ["012", 2],
+    ["013", 3],
+    ["014", 2],
+    ["015", 3],
+    ["016", 1],
+    ["017", 3],
+    ["018", 2],
+    ["019", 1],
+    ["020", 8],
+    ["021", 9],
+    ["022", 4],
+    ["023", 1],
+  ])
+    .map(([id, count]) => repeat(cardsById[id], count))
+    .flat(),
 };
 
 export function rotateCard(card: Card, delta: Rotation): Card {

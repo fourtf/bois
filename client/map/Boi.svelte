@@ -4,6 +4,7 @@
 
   export let claimPos: ClaimPos;
   export let style: string = "";
+  export let rotation: number = 0;
 
   $: x = Math.floor(claimPos.position[0] * cellSize - boiSize / 2);
   $: y = Math.floor(claimPos.position[1] * cellSize - boiSize / 2);
@@ -15,6 +16,6 @@
   style="position: absolute; margin: {y}px 0 0 {x}px; width: {boiSize}px; height: {boiSize}px; outline-color: {claimPos.type ===
   'lawn'
     ? 'green'
-    : 'red'}; {style}"
+    : 'red'}; {style}; transform: rotate({rotation}deg);"
   on:click
 />

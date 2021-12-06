@@ -69,6 +69,8 @@
       mapOffset = { x: mapOffset.x, y: mapOffset.y + offset };
     } else if (event.key === "ArrowDown" || event.key === "s") {
       mapOffset = { x: mapOffset.x, y: mapOffset.y - offset };
+    } else if (/[rR]/.test(event.key)) {
+      sendMessage({ type: "rotate-card" });
     }
   }
 </script>
@@ -85,72 +87,74 @@
     <div>
       <span>{titleOfState[game.state.type]}</span>
 
-      <div>
-        <button
-          disabled={game.state.type !== "game-ended"}
-          on:click={() => sendMessage({ type: "new-game" })}
-        >
-          New Game
-        </button>
+      <div style="display: flex">
+        <div style="margin-right: 16px">
+          <button
+            disabled={game.state.type !== "game-ended"}
+            on:click={() => sendMessage({ type: "new-game" })}
+          >
+            New Game
+          </button>
 
-        <button
-          disabled={game.state.type !== "not-started"}
-          on:click={() => sendMessage({ type: "start-game" })}
-        >
-          Start Game
-        </button>
+          <button
+            disabled={game.state.type !== "not-started"}
+            on:click={() => sendMessage({ type: "start-game" })}
+          >
+            Start Game
+          </button>
 
-        <button
-          disabled={hasGameStarted(game.state)}
-          on:click={() => sendMessage({ type: "join-game" })}
-        >
-          Join Game
-        </button>
+          <button
+            disabled={hasGameStarted(game.state)}
+            on:click={() => sendMessage({ type: "join-game" })}
+          >
+            Join Game
+          </button>
 
-        <button
-          disabled={hasGameStarted(game.state)}
-          on:click={() => sendMessage({ type: "leave-game" })}
-        >
-          Leave Game
-        </button>
+          <button
+            disabled={hasGameStarted(game.state)}
+            on:click={() => sendMessage({ type: "leave-game" })}
+          >
+            Leave Game
+          </button>
 
-        <br />
+          <br />
 
-        <button
-          disabled={game.state.type !== "draw-card"}
-          on:click={() => sendMessage({ type: "draw-card" })}
-        >
-          Draw Card
-        </button>
-        <button
-          disabled={game.state.type !== "play-card"}
-          on:click={() => sendMessage({ type: "rotate-card" })}
-        >
-          Rotate Card
-        </button>
-        {#if game.state.type === "play-card"}
-          <span>
-            Current Card:
-            <CardComponent
-              cardId={game.state.cardId}
-              size={cellSize}
-              rotation={game.state.cardRotation}
-            />
-          </span>
-        {/if}
-        <button
-          disabled={game.state.type !== "place-boi"}
-          on:click={() => sendMessage({ type: "skip-placing-boi" })}
-        >
-          Skip Placing Boi
-        </button>
+          <button
+            disabled={game.state.type !== "draw-card"}
+            on:click={() => sendMessage({ type: "draw-card" })}
+          >
+            Draw Card
+          </button>
+          <button
+            disabled={game.state.type !== "play-card"}
+            on:click={() => sendMessage({ type: "rotate-card" })}
+          >
+            Rotate Card
+          </button>
+          <button
+            disabled={game.state.type !== "place-boi"}
+            on:click={() => sendMessage({ type: "skip-placing-boi" })}
+          >
+            Skip Placing Boi
+          </button>
 
-        WASD to move map.
-        {#if game.cardCount !== undefined}
-          <span>
-            Cards left: {game.cardCount}
-          </span>
-        {/if}
+          WASD to move map.
+          {#if game.cardCount !== undefined}
+            <span>
+              Cards left: {game.cardCount}
+            </span>
+          {/if}
+        </div>
+
+        <CardComponent
+          cardId={game.state.type === "play-card"
+            ? game.state.cardId
+            : undefined}
+          size={cellSize}
+          rotation={game.state.type === "play-card"
+            ? game.state.cardRotation
+            : 0}
+        />
       </div>
 
       <div>
@@ -188,7 +192,11 @@
 
         <!-- BOI -->
         {#if cell.claimPos}
-          <BoiComponent claimPos={cell.claimPos} style="position: absolute" />
+          <BoiComponent
+            claimPos={cell.claimPos}
+            style="position: absolute"
+            rotation={-cell.rotation}
+          />
         {/if}
       </CellComponent>
     {/each}
@@ -221,6 +229,7 @@
         {#each game.state.claimPositions as claimPos}
           <BoiComponent
             {claimPos}
+            rotation={-game.state.rotation}
             on:click={() =>
               sendMessage({
                 type: "place-boi",

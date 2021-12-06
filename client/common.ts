@@ -12,6 +12,10 @@ export function getCardImage(cardId: string): string {
   return `/images/images-${cardId}.png`;
 }
 
+export function getImage(name: string): string {
+  return `/images/${name}`;
+}
+
 export function makeReconnectingWebSocket({
   url,
   protocols,
