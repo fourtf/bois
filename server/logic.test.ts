@@ -2,7 +2,7 @@ import { CoordinateKey, newCoordKey, Rotation } from "../shared/shared";
 import { Card, rotateCard } from "./cards";
 import type { ServerCell } from "./common";
 import { getPlaceablePositions } from "./logic";
-import { llll, llsl, makeCells, ssss, testCards } from "./tests";
+import { llll, llrr, llsl, makeCells, ssss } from "./tests";
 
 test("get placeable spots", () => {
   // one card with a street on the bottom

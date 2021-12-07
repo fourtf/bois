@@ -23,6 +23,7 @@ import {
   ServerClient,
   defaultBoiCount,
 } from "./common";
+import { checkFinishedStructures } from "./finished-structures";
 
 export class ServerGame {
   cells: Record<CoordinateKey, ServerCell> = {};
@@ -118,7 +119,7 @@ export class ServerGame {
 
     let cell = this.cells[newCoordKey(this.state.coord)];
     if (cell) {
-      cell.claimPos = pos;
+      cell.claimedPos = { ...pos, playerId: this.currentPlayer.id };
     }
 
     this.endTurn();
@@ -127,6 +128,14 @@ export class ServerGame {
   endTurn() {
     assertInState(this.state.type, "place-boi");
 
+    // points
+    const { pointsGainedPerPlayer, regainedBoisPerPlayer } =
+      checkFinishedStructures(this.cells, this.state.coord);
+
+    addPointsToScores(this.players, pointsGainedPerPlayer);
+    addRegainedBois(this.players, regainedBoisPerPlayer);
+
+    // next state
     if (this.cardsLeft.length === 0) {
       this.state = { type: "game-ended" };
     } else {
@@ -213,7 +222,7 @@ export function liftServerGame(sg: ServerGame): Game {
   return {
     state: sg.state,
     cells: Object.values(sg.cells).map(
-      ({ card, coord, rotation, claimPos }): Cell => ({
+      ({ card, coord, rotation, claimedPos: claimPos }): Cell => ({
         cardId: card.id,
         coord,
         rotation,
@@ -236,4 +245,30 @@ export function liftServerGame(sg: ServerGame): Game {
     spectatorCount:
       sg.clients.length - sg.players.filter((x) => x.isConnected).length,
   };
+}
+
+function addPointsToScores(
+  players: ServerPlayer[],
+  pointsPerPlayer: Map<string, number>
+) {
+  for (const [playerId, points] of pointsPerPlayer.entries()) {
+    const player = players.find((p) => p.id === playerId);
+
+    if (player) {
+      player.score += points;
+    }
+  }
+}
+
+function addRegainedBois(
+  players: ServerPlayer[],
+  regainedBoisPerPlayer: Map<string, number>
+) {
+  for (const [playerId, bois] of regainedBoisPerPlayer.entries()) {
+    const player = players.find((p) => p.id === playerId);
+
+    if (player) {
+      player.boisLeft += bois;
+    }
+  }
 }

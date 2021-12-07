@@ -1,10 +1,4 @@
-import type {
-  ClaimPos,
-  Coordinate,
-  Player,
-  Rotation,
-  State,
-} from "../shared/shared";
+import type { ClaimedPos, Coordinate, Rotation, State } from "../shared/shared";
 import type WebSocket from "ws";
 import type { Card } from "./cards";
 
@@ -14,7 +8,7 @@ export type ServerCell = {
   card: Card;
   coord: Coordinate;
   rotation?: Rotation;
-  claimPos?: ClaimPos;
+  claimedPos?: ClaimedPos;
 };
 
 export type ServerPlayer = {

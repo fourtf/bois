@@ -64,6 +64,10 @@ export interface ClaimPos {
   position: [number, number];
 }
 
+export type ClaimedPos = ClaimPos & {
+  playerId: string;
+};
+
 export type CellConnection = "top" | "bottom" | "left" | "right";
 export type LawnConnection =
   | "topLeft"
