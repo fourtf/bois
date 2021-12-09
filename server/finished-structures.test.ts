@@ -1,6 +1,6 @@
 import { newCoordKey } from "../shared/shared";
 import { rotateCard } from "./cards";
-import { checkFinishedStructures } from "./finished-structures";
+import { checkFinishedStructures, isBoiOnStreet } from "./finished-structures";
 import { llrr, makeCells } from "./tests";
 
 test("check-finished-structures", () => {
@@ -51,4 +51,62 @@ test("check-finished-structures-negative", () => {
   expect(
     Object.values(cells).find((c) => c.claimedPos !== undefined)
   ).toBeTruthy();
+});
+
+test("is-boi-on-street", () => {
+  const cells = makeCells([
+    [llrr, 1, 0, 0],
+    [rotateCard(llrr, 90), 1, 1, 0],
+    [rotateCard(llrr, 180), 0, 1, 0],
+  ]);
+
+  expect(
+    isBoiOnStreet(
+      cells,
+      { x: 1, y: 0 },
+      cells[newCoordKey(1, 0)].card.streets[0]
+    )
+  ).toEqual(false);
+  expect(
+    isBoiOnStreet(
+      cells,
+      { x: 1, y: 1 },
+      cells[newCoordKey(1, 1)].card.streets[0]
+    )
+  ).toEqual(false);
+  expect(
+    isBoiOnStreet(
+      cells,
+      { x: 0, y: 1 },
+      cells[newCoordKey(0, 1)].card.streets[0]
+    )
+  ).toEqual(false);
+
+  cells[newCoordKey(1, 0)].claimedPos = {
+    type: "street",
+    position: llrr.streets[0].claimPos,
+    playerId: "xd",
+  };
+
+  expect(
+    isBoiOnStreet(
+      cells,
+      { x: 1, y: 0 },
+      cells[newCoordKey(1, 0)].card.streets[0]
+    )
+  ).toEqual(true);
+  expect(
+    isBoiOnStreet(
+      cells,
+      { x: 1, y: 1 },
+      cells[newCoordKey(1, 1)].card.streets[0]
+    )
+  ).toEqual(true);
+  expect(
+    isBoiOnStreet(
+      cells,
+      { x: 0, y: 1 },
+      cells[newCoordKey(0, 1)].card.streets[0]
+    )
+  ).toEqual(true);
 });

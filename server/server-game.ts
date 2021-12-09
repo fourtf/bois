@@ -13,9 +13,9 @@ import {
 } from "../shared/shared";
 import { v4 as uuidv4 } from "uuid";
 import type WebSocket from "ws";
-import { allCards, Card, getClaimPositions, rotateCard } from "./cards";
+import { allCards, Card, rotateCard } from "./cards";
 import { removeIf, removeRandom } from "../shared/util";
-import { getPlaceablePositions } from "./logic";
+import { getClaimPositions, getPlaceablePositions } from "./logic";
 import {
   assertInState,
   ServerCell,
@@ -91,7 +91,7 @@ export class ServerGame {
     this.state = {
       type: "place-boi",
       coord,
-      claimPositions: getClaimPositions(this.cardToPlay),
+      claimPositions: getClaimPositions(this.cells, coord),
       rotation: this.state.cardRotation,
     };
     this.cardToPlay = undefined;

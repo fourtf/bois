@@ -21,7 +21,7 @@
 
   let game: Game | null = null;
   let playerId: string | null = null;
-  let mapOffset: Coordinate = { x: 300, y: 200 };
+  let mapOffset: Coordinate = { x: 0, y: 0 };
 
   playerIdStore.subscribe((newPlayerId) => {
     playerId = newPlayerId;
@@ -193,7 +193,9 @@
   </div>
 
   <!-- MAP -->
-  <div style="position: absolute; margin: {mapOffset.y}px 0 0 {mapOffset.x}px">
+  <div
+    style="position: absolute; margin-top: calc(50vh + {mapOffset.y}px); margin-left: calc(50vw + {mapOffset.x}px)"
+  >
     <!-- CARDS -->
     {#each game.cells as cell}
       <CellComponent

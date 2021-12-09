@@ -58,15 +58,19 @@ export function checkFinishedStructures(
   return { regainedBoisPerPlayer, pointsGainedPerPlayer };
 }
 
-// Allows walking building such as streets and cities which are connected and
-// may contain multiple differerent buildings in the same cell. To allow this
-// we can't simply track the visited cells by their coordinates as it could be
-// e.g. the same street running through a cell twice. So we also include the
-// first connection of the cell.
-//
-// We first supply some functions to allow generalizing the algorithm. Then,
-// a second function is returned which can be supplied with the starting cell,
-// etc. This allows for easy generalization.
+/**
+ * Allows walking building such as streets and cities which are connected and
+ * may contain multiple differerent buildings in the same cell. To allow this
+ * we can't simply track the visited cells by their coordinates as it could be
+ * e.g. the same street running through a cell twice. So we also include the
+ * first connection of the cell.
+ *
+ * We first supply some functions to allow generalizing the algorithm. Then,
+ * a second function is returned which can be supplied with the starting cell,
+ * etc. This allows for easy generalization.
+ *
+ * @returns true if the building is finished
+ */
 const walker =
   <T, ConnectionT extends string>({
     getTFromConnection,
@@ -126,15 +130,15 @@ const walkStreet = walker<Street, CellConnection>({
   getConnections: (street: Street) => street.connections,
   moveToNextCell,
   getTFromConnection: (cell, connecting) =>
-    cell.card.streets.find((s) =>
-      s.connections.includes(invertCellConnection(connecting))
+    cell.card.streets.find((street) =>
+      street.connections.includes(invertCellConnection(connecting))
     ),
 });
 
 const walkCity = walker<City, CellConnection>({
   getTFromConnection: (cell, connectingConn) =>
-    cell.card.cities.find((s) =>
-      s.connections.includes(invertCellConnection(connectingConn))
+    cell.card.cities.find((city) =>
+      city.connections.includes(invertCellConnection(connectingConn))
     ),
   getConnections: (city: City) => city.connections,
   moveToNextCell,
@@ -143,8 +147,8 @@ const walkCity = walker<City, CellConnection>({
 const walkLawn = walker<Lawn, LawnConnection>({
   getConnections: (lawn: Lawn) => lawn.connections,
   getTFromConnection: (cell, connectingConn) =>
-    cell.card.lawns.find((l) =>
-      l.connections.includes(invertLawnConnection(connectingConn))
+    cell.card.lawns.find((lawn) =>
+      lawn.connections.includes(invertLawnConnection(connectingConn))
     ),
   moveToNextCell: ({ x, y }, conn) => ({
     x: x + (conn.startsWith("left") ? -1 : conn.startsWith("right") ? 1 : 0),
@@ -191,6 +195,60 @@ function checkFinishedStreet(
     cellsToClearBoisFrom,
     cellCount: cellCount.size,
   };
+}
+
+export function isBoiOnStreet(
+  cells: Record<CoordinateKey, ServerCell>,
+  coord: Coordinate,
+  street: Street
+): boolean {
+  let res = false;
+
+  walkStreet(cells, coord, street, (cell, _coord, street2) => {
+    if (cell.claimedPos !== undefined) {
+      if (posEquals(cell.claimedPos.position, street2.claimPos)) {
+        res = true;
+      }
+    }
+  });
+
+  return res;
+}
+
+export function isBoiOnCity(
+  cells: Record<CoordinateKey, ServerCell>,
+  coord: Coordinate,
+  city: City
+): boolean {
+  let res = false;
+
+  walkCity(cells, coord, city, (cell, _coord, city2) => {
+    if (cell.claimedPos !== undefined) {
+      if (posEquals(cell.claimedPos.position, city2.claimPos)) {
+        res = true;
+      }
+    }
+  });
+
+  return res;
+}
+
+export function isBoiOnLawn(
+  cells: Record<CoordinateKey, ServerCell>,
+  coord: Coordinate,
+  lawn: Lawn
+): boolean {
+  let res = false;
+
+  walkLawn(cells, coord, lawn, (cell, _coord, lawn2) => {
+    if (cell.claimedPos !== undefined) {
+      if (posEquals(cell.claimedPos.position, lawn2.claimPos)) {
+        res = true;
+      }
+    }
+  });
+
+  return res;
 }
 
 type VisitedKey = `${CoordinateKey}|${CellConnection}`;
@@ -250,6 +308,10 @@ function invertCellConnection(connection: CellConnection): CellConnection {
 }
 
 function posEquals(a: [number, number], b: [number, number]) {
+  if (a === undefined) {
+    debugger;
+  }
+
   return a[0] === b[0] && a[1] === b[1];
 }
 

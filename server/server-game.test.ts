@@ -81,10 +81,16 @@ test("game logic", () => {
 
     state = sg.state;
     assertInState(state.type, "place-boi");
-    processMessage(sg, {
-      type: "place-boi",
-      claimPos: state.claimPositions[0],
-    });
+    if (state.claimPositions.length === 0) {
+      processMessage(sg, {
+        type: "skip-placing-boi",
+      });
+    } else {
+      processMessage(sg, {
+        type: "place-boi",
+        claimPos: state.claimPositions[0],
+      });
+    }
   }
 
   expect(sg.cardsLeft.length).toBe(0);

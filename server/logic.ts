@@ -1,14 +1,18 @@
 import {
   addToCoordKey,
+  CellConnection,
+  ClaimPos,
+  ClaimType,
   ClientMessage,
   Coordinate,
   CoordinateKey,
   newCoordKey,
   parseCoordKey,
 } from "../shared/shared";
-import { uniqueStrings } from "../shared/util";
-import { baseSet, Card, getConnector } from "./cards";
+import { ifMap, maybeToArray, uniqueStrings } from "../shared/util";
+import { baseSet, Card } from "./cards";
 import type { ServerCell } from "./common";
+import { isBoiOnCity, isBoiOnLawn, isBoiOnStreet } from "./finished-structures";
 import type { ServerGame } from "./server-game";
 
 export function processMessage(sg: ServerGame, msg: ClientMessage) {
@@ -100,4 +104,35 @@ function getSurroundingCells(
   );
 
   return x;
+}
+
+export function getClaimPositions(
+  cells: Record<string, ServerCell>,
+  coord: Coordinate
+): ClaimPos[] {
+  const mapCP =
+    (type: ClaimType) =>
+    ({ claimPos: position }): ClaimPos => ({ type, position });
+  const card = cells[newCoordKey(coord)]?.card;
+
+  return [
+    ...(card.lawns
+      ?.filter((lawn) => !isBoiOnLawn(cells, coord, lawn))
+      ?.map(mapCP("lawn")) ?? []),
+    ...(card.streets
+      ?.filter((street) => !isBoiOnStreet(cells, coord, street))
+      ?.map(mapCP("street")) ?? []),
+    ...(card.cities
+      ?.filter((city) => !isBoiOnCity(cells, coord, city))
+      ?.map(mapCP("city")) ?? []),
+    ...maybeToArray(ifMap(card.monastery, mapCP("monastery"))),
+  ];
+}
+
+export function getConnector(card: Card, conn: CellConnection): string {
+  return card.streets?.find(({ connections }) => connections.includes(conn))
+    ? "street"
+    : card.cities?.find(({ connections }) => connections.includes(conn))
+    ? "city"
+    : "lawn";
 }

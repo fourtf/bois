@@ -4,12 +4,14 @@ import type {
   CityEffect,
   ClaimPos,
   ClaimType,
+  Coordinate,
   LawnConnection,
   Rotation,
   StreetEffect,
 } from "../shared/shared";
 import { ifMap as mapMaybe, maybeToArray, repeat } from "../shared/util";
 import type { ServerCell } from "./common";
+import { isBoiOnStreet } from "./finished-structures";
 
 export interface Card {
   id: string;
@@ -487,25 +489,4 @@ export function rotateCard(card: Card, delta: Rotation): Card {
   }
 
   return card;
-}
-
-export function getClaimPositions(card: Card): ClaimPos[] {
-  const mapCP =
-    (type: ClaimType) =>
-    ({ claimPos: position }): ClaimPos => ({ type, position });
-
-  return [
-    ...(card.lawns?.map(mapCP("lawn")) ?? []),
-    ...(card.streets?.map(mapCP("street")) ?? []),
-    ...(card.cities?.map(mapCP("city")) ?? []),
-    ...maybeToArray(mapMaybe(card.monastery, mapCP("monastery"))),
-  ];
-}
-
-export function getConnector(card: Card, conn: CellConnection): string {
-  return card.streets?.find(({ connections }) => connections.includes(conn))
-    ? "street"
-    : card.cities?.find(({ connections }) => connections.includes(conn))
-    ? "city"
-    : "lawn";
 }

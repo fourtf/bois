@@ -1,8 +1,7 @@
-import { CoordinateKey, newCoordKey, Rotation } from "../shared/shared";
-import { Card, rotateCard } from "./cards";
-import type { ServerCell } from "./common";
-import { getPlaceablePositions } from "./logic";
-import { llll, llrr, llsl, makeCells, ssss } from "./tests";
+import { newCoordKey } from "../shared/shared";
+import { rotateCard } from "./cards";
+import { getClaimPositions, getPlaceablePositions } from "./logic";
+import { llsl, makeCells, ssss } from "./tests";
 
 test("get placeable spots", () => {
   // one card with a street on the bottom
@@ -43,4 +42,100 @@ test("rotation-360", () => {
   expect(
     rotateCard(rotateCard(rotateCard(rotateCard(ssss, 90), 90), 90), 90)
   ).toEqual(ssss);
+});
+
+test("get-claimed-positions", () => {
+  const cells = makeCells([[llsl, 0, 0, 0]]);
+
+  expect(getClaimPositions(cells, { x: 0, y: 0 })).toStrictEqual([
+    {
+      position: [0.2, 0.2],
+      type: "lawn",
+    },
+    {
+      position: [0.5, 0.8],
+      type: "street",
+    },
+    {
+      position: [0.5, 0.5],
+      type: "monastery",
+    },
+  ]);
+
+  cells[newCoordKey(0, 0)].claimedPos = {
+    type: "street",
+    position: llsl.streets[0].claimPos,
+    playerId: "xd",
+  };
+
+  expect(getClaimPositions(cells, { x: 0, y: 0 })).toStrictEqual([
+    {
+      position: [0.2, 0.2],
+      type: "lawn",
+    },
+    {
+      position: [0.5, 0.5],
+      type: "monastery",
+    },
+  ]);
+
+  cells[newCoordKey(0, 0)].claimedPos = {
+    type: "lawn",
+    position: llsl.lawns[0].claimPos,
+    playerId: "xd",
+  };
+
+  expect(getClaimPositions(cells, { x: 0, y: 0 })).toStrictEqual([
+    {
+      position: [0.5, 0.8],
+      type: "street",
+    },
+    {
+      position: [0.5, 0.5],
+      type: "monastery",
+    },
+  ]);
+});
+
+test("get-claimed-positions-with-connected-cells", () => {
+  const slll = rotateCard(llsl, 180);
+
+  const cells = makeCells([
+    [llsl, 0, 0, 0],
+    [slll, 0, 1, 0],
+  ]);
+
+  cells[newCoordKey(0, 1)].claimedPos = {
+    type: "street",
+    position: slll.streets[0].claimPos,
+    playerId: "xd",
+  };
+
+  expect(getClaimPositions(cells, { x: 0, y: 0 })).toStrictEqual([
+    {
+      position: [0.2, 0.2],
+      type: "lawn",
+    },
+    {
+      position: [0.5, 0.5],
+      type: "monastery",
+    },
+  ]);
+
+  cells[newCoordKey(0, 1)].claimedPos = {
+    type: "lawn",
+    position: slll.lawns[0].claimPos,
+    playerId: "xd",
+  };
+
+  expect(getClaimPositions(cells, { x: 0, y: 0 })).toStrictEqual([
+    {
+      position: [0.5, 0.8],
+      type: "street",
+    },
+    {
+      position: [0.5, 0.5],
+      type: "monastery",
+    },
+  ]);
 });
