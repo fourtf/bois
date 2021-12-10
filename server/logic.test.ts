@@ -62,9 +62,9 @@ test("get-claimed-positions", () => {
     },
   ]);
 
-  cells[newCoordKey(0, 0)].claimedPos = {
+  cells[newCoordKey(0, 0)]!.claimedPos = {
     type: "street",
-    position: llsl.streets[0].claimPos,
+    position: llsl.streets![0]!.claimPos,
     playerId: "xd",
   };
 
@@ -79,9 +79,9 @@ test("get-claimed-positions", () => {
     },
   ]);
 
-  cells[newCoordKey(0, 0)].claimedPos = {
+  cells[newCoordKey(0, 0)]!.claimedPos = {
     type: "lawn",
-    position: llsl.lawns[0].claimPos,
+    position: llsl.lawns![0]!.claimPos,
     playerId: "xd",
   };
 
@@ -105,9 +105,9 @@ test("get-claimed-positions-with-connected-cells", () => {
     [slll, 0, 1, 0],
   ]);
 
-  cells[newCoordKey(0, 1)].claimedPos = {
+  cells[newCoordKey(0, 1)]!.claimedPos = {
     type: "street",
-    position: slll.streets[0].claimPos,
+    position: slll.streets![0]!.claimPos,
     playerId: "xd",
   };
 
@@ -122,9 +122,9 @@ test("get-claimed-positions-with-connected-cells", () => {
     },
   ]);
 
-  cells[newCoordKey(0, 1)].claimedPos = {
+  cells[newCoordKey(0, 1)]!.claimedPos = {
     type: "lawn",
-    position: slll.lawns[0].claimPos,
+    position: slll.lawns![0]!.claimPos,
     playerId: "xd",
   };
 

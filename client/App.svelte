@@ -202,7 +202,7 @@
         coord={cell.coord}
         size={cellSize}
         offset={cellOffset}
-        rotation={cell.rotation}
+        rotation={cell.rotation ?? 0}
       >
         <CardComponent
           cardId={cell.cardId}
@@ -215,7 +215,7 @@
           <BoiComponent
             claimPos={cell.claimPos}
             style="position: absolute"
-            rotation={-cell.rotation}
+            rotation={-(cell.rotation ?? 0)}
           />
         {/if}
       </CellComponent>

@@ -3,7 +3,12 @@
     "types": [
       "svelte",
       "jest"
-    ]
+    ],
+    "strictBindCallApply": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "strictFunctionTypes": true,
+    "useUnknownInCatchVariables": true
   },
   "extends": "@tsconfig/svelte/tsconfig.json",
   "include": [

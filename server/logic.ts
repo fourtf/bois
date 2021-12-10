@@ -12,7 +12,8 @@ import {
 import { ifMap, maybeToArray, uniqueStrings } from "../shared/util";
 import { baseSet, Card } from "./cards";
 import type { ServerCell } from "./common";
-import { isBoiOnCity, isBoiOnLawn, isBoiOnStreet } from "./finished-structures";
+import { isBoiOnStructure } from "./finished-structures";
+import { cityWalker, lawnWalker, streetWalker } from "./reduce";
 import type { ServerGame } from "./server-game";
 
 export function processMessage(sg: ServerGame, msg: ClientMessage) {
@@ -91,7 +92,7 @@ function getSurroundingCells(
       .map((card) => {
         const { x, y } = card.coord;
 
-        return [
+        return <[number, number][]>[
           [x - 1, y],
           [x + 1, y],
           [x, y - 1],
@@ -112,18 +113,30 @@ export function getClaimPositions(
 ): ClaimPos[] {
   const mapCP =
     (type: ClaimType) =>
-    ({ claimPos: position }): ClaimPos => ({ type, position });
-  const card = cells[newCoordKey(coord)]?.card;
+    ({ claimPos: position }: { claimPos: [number, number] }): ClaimPos => ({
+      type,
+      position,
+    });
+  const card = cells[newCoordKey(coord)]?.card!;
 
   return [
     ...(card.lawns
-      ?.filter((lawn) => !isBoiOnLawn(cells, coord, lawn))
+      ?.filter(
+        (structure) =>
+          !isBoiOnStructure(lawnWalker, { cells, coord, structure })
+      )
       ?.map(mapCP("lawn")) ?? []),
     ...(card.streets
-      ?.filter((street) => !isBoiOnStreet(cells, coord, street))
+      ?.filter(
+        (structure) =>
+          !isBoiOnStructure(streetWalker, { cells, coord, structure })
+      )
       ?.map(mapCP("street")) ?? []),
     ...(card.cities
-      ?.filter((city) => !isBoiOnCity(cells, coord, city))
+      ?.filter(
+        (structure) =>
+          !isBoiOnStructure(cityWalker, { cells, coord, structure })
+      )
       ?.map(mapCP("city")) ?? []),
     ...maybeToArray(ifMap(card.monastery, mapCP("monastery"))),
   ];

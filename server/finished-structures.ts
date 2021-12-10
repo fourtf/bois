@@ -1,14 +1,18 @@
 import {
   addToCoordKey,
-  Cell,
-  CellConnection,
   Coordinate,
   CoordinateKey,
-  LawnConnection,
   newCoordKey,
 } from "../shared/shared";
-import type { City, Lawn, Street } from "./cards";
+import { posEquals } from "../shared/util";
 import type { ServerCell } from "./common";
+import {
+  StructureInfo,
+  reduceStructure,
+  streetWalker,
+  cityWalker,
+  Walker,
+} from "./reduce";
 
 /**
  * @returns points per user gained
@@ -16,329 +20,143 @@ import type { ServerCell } from "./common";
 export function checkFinishedStructures(
   cells: Record<CoordinateKey, ServerCell>,
   coord: Coordinate
-): {
-  regainedBoisPerPlayer: Map<string, number>;
-  pointsGainedPerPlayer: Map<string, number>;
-} {
-  // monastery: check for all monasteries around
-  // street: walk all streets
-  // city: walk all cities
-
-  const coordKey = newCoordKey(coord);
+) {
   const regainedBoisPerPlayer = new Map<string, number>();
   const pointsGainedPerPlayer = new Map<string, number>();
 
-  const { streets, cities, monastery } =
-    cells[addToCoordKey(coordKey, 0, 0)].card;
+  const coordKey = newCoordKey(coord);
+  const cell = cells[addToCoordKey(coordKey, 0, 0)];
+  if (cell === undefined) {
+    throw new Error("cell is undefined");
+  }
 
-  for (const street of streets ?? []) {
-    const { isFinished, boisPerPlayer, cellsToClearBoisFrom, cellCount } =
-      checkFinishedStreet(cells, coord, street);
+  const { streets, cities, monastery } = cell.card;
 
-    if (isFinished) {
+  // streets and cities
+  const streetResults =
+    streets?.map((structure) =>
+      checkFinishedStructure(streetWalker, { cells, coord, structure })
+    ) ?? [];
+
+  const cityResults =
+    cities?.map((structure) =>
+      checkFinishedStructure(cityWalker, { cells, coord, structure })
+    ) ?? [];
+
+  // evalutate results
+  for (const {
+    isStructureFinished,
+    boisPerPlayer,
+    cellsToClearBoisFrom,
+    cellCount,
+  } of [...streetResults, ...cityResults]) {
+    if (isStructureFinished) {
       const maxBoisOnStreet = Math.max(...boisPerPlayer.values());
 
-      addMapToMap(
-        pointsGainedPerPlayer,
-        filterThenSetAll(
-          boisPerPlayer,
-          (value) => value === maxBoisOnStreet,
-          cellCount
-        )
-      );
+      for (const [id, bois] of boisPerPlayer.entries()) {
+        if (bois === maxBoisOnStreet) {
+          pointsGainedPerPlayer.set(
+            id,
+            (pointsGainedPerPlayer.get(id) ?? 0) + cellCount.size
+          );
+        }
+      }
 
       for (const cell of cellsToClearBoisFrom) {
         cell.claimedPos = undefined;
       }
 
-      mergeMaps(regainedBoisPerPlayer, boisPerPlayer);
+      for (const [key, value] of boisPerPlayer) {
+        regainedBoisPerPlayer.set(
+          key,
+          (regainedBoisPerPlayer.get(key) ?? 0) + value
+        );
+      }
     }
   }
+
+  /*
+  for (let x = coord.x - 1; x <= coord.x + 1; x++) {
+    for (let y = coord.y - 1; y <= coord.y + 1; y++) {
+      const cell = cells[newCoordKey(x, y)];
+      if (
+        cell?.card?.monastery !== undefined &&
+        cell?.claimedPos?.playerId !== undefined
+      ) {
+        const { isFinished } = checkFinishedMonastery(
+          cells,
+          { x, y },
+          cell.card.monastery
+        );
+
+        if (isFinished) {
+          cell.claimedPos = undefined;
+
+          mergeMaps(
+            regainedBoisPerPlayer,
+            new Map([[cell.claimedPos.playerId, 1]])
+          );
+          addMapToMap(
+            pointsGainedPerPlayer,
+            new Map([[cell.claimedPos.playerId, 9]])
+          );
+          pointsGainedPerPlayer.set(cell.claimedPos.playerId, 0);
+        }
+      }
+    }
+  }
+  */
 
   return { regainedBoisPerPlayer, pointsGainedPerPlayer };
 }
 
-/**
- * Allows walking building such as streets and cities which are connected and
- * may contain multiple differerent buildings in the same cell. To allow this
- * we can't simply track the visited cells by their coordinates as it could be
- * e.g. the same street running through a cell twice. So we also include the
- * first connection of the cell.
- *
- * We first supply some functions to allow generalizing the algorithm. Then,
- * a second function is returned which can be supplied with the starting cell,
- * etc. This allows for easy generalization.
- *
- * @returns true if the building is finished
- */
-const walker =
-  <T, ConnectionT extends string>({
-    getTFromConnection,
-    getConnections,
-    moveToNextCell: getNewCoord,
-  }: {
-    getTFromConnection: (cell: ServerCell, connectingConn: ConnectionT) => T;
-    getConnections: (t: T) => ConnectionT[];
-    moveToNextCell: (coord: Coordinate, conn: ConnectionT) => Coordinate;
-  }) =>
-  (
-    cells: Record<CoordinateKey, ServerCell>,
-    startCoord: Coordinate,
-    startT: T,
-    fn: (cell: ServerCell, coord: Coordinate, el: T) => void
-  ) => {
-    const queue: [Coordinate, T][] = [[startCoord, startT]];
-    const visited = new Set<VisitedKey>([
-      newVisitedKey(newCoordKey(startCoord), getConnections(startT)),
-    ]);
-    let isFinished = true;
-
-    while (queue.length > 0) {
-      const [currentCoord, currentT] = queue.pop()!;
-
-      fn(cells[newCoordKey(currentCoord)], currentCoord, currentT);
-
-      for (const conn of getConnections(currentT)) {
-        const coord = getNewCoord(currentCoord, conn);
-        const cell = cells[newCoordKey(coord)];
-
-        // if the cell doesn't exist then the building is not finished
-        if (cell === undefined) {
-          isFinished = false;
-          continue;
-        }
-
-        // get next element in one direction
-        const t = getTFromConnection(cell, conn);
-        if (t === undefined) {
-          throw new Error("Street not found");
-        }
-
-        // add to queue if not visited
-        const key = newVisitedKey(newCoordKey(coord), getConnections(t));
-        if (!visited.has(key)) {
-          visited.add(key);
-
-          queue.push([coord, t!]);
-        }
-      }
-    }
-    return isFinished;
-  };
-
-const walkStreet = walker<Street, CellConnection>({
-  getConnections: (street: Street) => street.connections,
-  moveToNextCell,
-  getTFromConnection: (cell, connecting) =>
-    cell.card.streets.find((street) =>
-      street.connections.includes(invertCellConnection(connecting))
-    ),
-});
-
-const walkCity = walker<City, CellConnection>({
-  getTFromConnection: (cell, connectingConn) =>
-    cell.card.cities.find((city) =>
-      city.connections.includes(invertCellConnection(connectingConn))
-    ),
-  getConnections: (city: City) => city.connections,
-  moveToNextCell,
-});
-
-const walkLawn = walker<Lawn, LawnConnection>({
-  getConnections: (lawn: Lawn) => lawn.connections,
-  getTFromConnection: (cell, connectingConn) =>
-    cell.card.lawns.find((lawn) =>
-      lawn.connections.includes(invertLawnConnection(connectingConn))
-    ),
-  moveToNextCell: ({ x, y }, conn) => ({
-    x: x + (conn.startsWith("left") ? -1 : conn.startsWith("right") ? 1 : 0),
-    y: y + (conn.startsWith("top") ? -1 : conn.startsWith("bottom") ? 1 : 0),
-  }),
-});
-
-function checkFinishedStreet(
-  cells: Record<CoordinateKey, ServerCell>,
-  coord: Coordinate,
-  street: Street
-): {
-  isFinished: boolean;
-  boisPerPlayer: Map<string, number>;
-  cellsToClearBoisFrom: ServerCell[];
-  cellCount: number;
-} {
-  let boisPerPlayer = new Map<string, number>();
-  let cellsToClearBoisFrom: ServerCell[] = [];
-  let cellCount = new Set<CoordinateKey>();
-
-  const isFinished = walkStreet(
-    cells,
-    coord,
-    street,
-    (cell, _coord, street) => {
+function checkFinishedStructure<StructureT, ConnectionT extends string>(
+  walker: Walker<StructureT, ConnectionT>,
+  info: StructureInfo<StructureT>
+) {
+  return reduceStructure(
+    walker,
+    info,
+    (acc, cell, _coord, street) => {
       // check if boi is on the street
       if (cell.claimedPos !== undefined) {
         const { playerId } = cell.claimedPos;
 
-        if (posEquals(cell.claimedPos.position, street.claimPos)) {
-          boisPerPlayer.set(playerId, (boisPerPlayer.get(playerId) ?? 0) + 1);
-          cellsToClearBoisFrom.push(cell);
+        if (posEquals(cell.claimedPos.position, walker.getClaimPos(street))) {
+          acc.boisPerPlayer.set(
+            playerId,
+            (acc.boisPerPlayer.get(playerId) ?? 0) + 1
+          );
+          acc.cellsToClearBoisFrom.push(cell);
         }
       }
 
-      cellCount.add(newCoordKey(cell.coord));
+      acc.cellCount.add(newCoordKey(cell.coord));
+      return acc;
+    },
+    {
+      boisPerPlayer: new Map<string, number>(),
+      cellsToClearBoisFrom: [] as ServerCell[],
+      cellCount: new Set<CoordinateKey>(),
     }
   );
-
-  return {
-    isFinished,
-    boisPerPlayer,
-    cellsToClearBoisFrom,
-    cellCount: cellCount.size,
-  };
 }
 
-export function isBoiOnStreet(
-  cells: Record<CoordinateKey, ServerCell>,
-  coord: Coordinate,
-  street: Street
+export function isBoiOnStructure<T, ConnectionT extends string>(
+  walker: Walker<T, ConnectionT>,
+  info: StructureInfo<T>
 ): boolean {
-  let res = false;
-
-  walkStreet(cells, coord, street, (cell, _coord, street2) => {
-    if (cell.claimedPos !== undefined) {
-      if (posEquals(cell.claimedPos.position, street2.claimPos)) {
-        res = true;
+  return reduceStructure(
+    walker,
+    info,
+    (acc, cell, _coord, street) => {
+      if (cell.claimedPos !== undefined) {
+        if (posEquals(cell.claimedPos.position, walker.getClaimPos(street))) {
+          acc.res = true;
+        }
       }
-    }
-  });
-
-  return res;
-}
-
-export function isBoiOnCity(
-  cells: Record<CoordinateKey, ServerCell>,
-  coord: Coordinate,
-  city: City
-): boolean {
-  let res = false;
-
-  walkCity(cells, coord, city, (cell, _coord, city2) => {
-    if (cell.claimedPos !== undefined) {
-      if (posEquals(cell.claimedPos.position, city2.claimPos)) {
-        res = true;
-      }
-    }
-  });
-
-  return res;
-}
-
-export function isBoiOnLawn(
-  cells: Record<CoordinateKey, ServerCell>,
-  coord: Coordinate,
-  lawn: Lawn
-): boolean {
-  let res = false;
-
-  walkLawn(cells, coord, lawn, (cell, _coord, lawn2) => {
-    if (cell.claimedPos !== undefined) {
-      if (posEquals(cell.claimedPos.position, lawn2.claimPos)) {
-        res = true;
-      }
-    }
-  });
-
-  return res;
-}
-
-type VisitedKey = `${CoordinateKey}|${CellConnection}`;
-
-function newVisitedKey(
-  coordKey: CoordinateKey,
-  connections: string[]
-): VisitedKey {
-  return `${coordKey}|${connections[0]}` as VisitedKey;
-}
-
-function addMapToMap(a: Map<string, number>, b: Map<string, number>) {
-  for (const [key, value] of b) {
-    a.set(key, (a.get(key) ?? 0) + value);
-  }
-}
-
-function filterThenSetAll(
-  map: Map<string, number>,
-  predicate: (value: number) => boolean,
-  newValue: number
-): Map<string, number> {
-  const result = new Map<string, number>();
-
-  for (const [key, value] of map) {
-    if (predicate(value)) {
-      result.set(key, newValue);
-    }
-  }
-
-  return result;
-}
-
-function mergeMaps(
-  regainedBoisPerPlayer: Map<string, number>,
-  boisPerPlayer: Map<string, number>
-) {
-  for (const [key, value] of boisPerPlayer) {
-    regainedBoisPerPlayer.set(
-      key,
-      (regainedBoisPerPlayer.get(key) ?? 0) + value
-    );
-  }
-}
-
-function invertCellConnection(connection: CellConnection): CellConnection {
-  switch (connection) {
-    case "left":
-      return "right";
-    case "right":
-      return "left";
-    case "top":
-      return "bottom";
-    case "bottom":
-      return "top";
-  }
-}
-
-function posEquals(a: [number, number], b: [number, number]) {
-  if (a === undefined) {
-    debugger;
-  }
-
-  return a[0] === b[0] && a[1] === b[1];
-}
-
-function invertLawnConnection(connection: LawnConnection): LawnConnection {
-  switch (connection) {
-    case "bottomLeft":
-      return "topLeft";
-    case "bottomRight":
-      return "topRight";
-    case "topLeft":
-      return "bottomLeft";
-    case "topRight":
-      return "bottomRight";
-    case "rightBottom":
-      return "leftBottom";
-    case "rightTop":
-      return "leftTop";
-    case "leftBottom":
-      return "rightBottom";
-    case "leftTop":
-      return "rightTop";
-  }
-}
-
-function moveToNextCell(coord: Coordinate, conn: CellConnection) {
-  return {
-    x: coord.x + (conn === "left" ? -1 : conn === "right" ? 1 : 0),
-    y: coord.y + (conn === "top" ? -1 : conn === "bottom" ? 1 : 0),
-  };
+      return acc;
+    },
+    { res: false }
+  ).res;
 }

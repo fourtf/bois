@@ -74,9 +74,10 @@ test("game logic", () => {
 
     state = sg.state;
     assertInState(state.type, "play-card");
+    expect(state.coords[0]).toBeTruthy();
     processMessage(sg, {
       type: "play-card",
-      coord: state.coords[0],
+      coord: state.coords[0]!,
     });
 
     state = sg.state;
@@ -88,7 +89,7 @@ test("game logic", () => {
     } else {
       processMessage(sg, {
         type: "place-boi",
-        claimPos: state.claimPositions[0],
+        claimPos: state.claimPositions[0]!,
       });
     }
   }

@@ -1,17 +1,12 @@
-import e from "express";
 import type {
   CellConnection,
   CityEffect,
-  ClaimPos,
-  ClaimType,
-  Coordinate,
   LawnConnection,
   Rotation,
   StreetEffect,
 } from "../shared/shared";
-import { ifMap as mapMaybe, maybeToArray, repeat } from "../shared/util";
+import { repeat } from "../shared/util";
 import type { ServerCell } from "./common";
-import { isBoiOnStreet } from "./finished-structures";
 
 export interface Card {
   id: string;
@@ -406,7 +401,7 @@ export const baseSet = {
     ["022", 4],
     ["023", 1],
   ])
-    .map(([id, count]) => repeat(cardsById[id], count))
+    .map(([id, count]) => repeat(cardsById[id]!, count))
     .flat(),
 };
 

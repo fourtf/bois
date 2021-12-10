@@ -1,6 +1,10 @@
 import { newCoordKey } from "../shared/shared";
 import { rotateCard } from "./cards";
-import { checkFinishedStructures, isBoiOnStreet } from "./finished-structures";
+import {
+  checkFinishedStructures,
+  isBoiOnStructure,
+} from "./finished-structures";
+import { streetWalker } from "./reduce";
 import { llrr, makeCells } from "./tests";
 
 test("check-finished-structures", () => {
@@ -11,9 +15,9 @@ test("check-finished-structures", () => {
     [rotateCard(llrr, 270), 0, 0, 0],
   ]);
 
-  cells[newCoordKey(1, 0)].claimedPos = {
+  cells[newCoordKey(1, 0)]!.claimedPos = {
     type: "street",
-    position: llrr.streets[0].claimPos,
+    position: llrr.streets![0]!.claimPos,
     playerId: "xd",
   };
 
@@ -40,9 +44,9 @@ test("check-finished-structures-negative", () => {
     [rotateCard(llrr, 180), 0, 1, 0],
   ]);
 
-  cells[newCoordKey(1, 0)].claimedPos = {
+  cells[newCoordKey(1, 0)]!.claimedPos = {
     type: "street",
-    position: llrr.streets[0].claimPos,
+    position: llrr.streets![0]!.claimPos,
     playerId: "xd",
   };
 
@@ -61,52 +65,52 @@ test("is-boi-on-street", () => {
   ]);
 
   expect(
-    isBoiOnStreet(
+    isBoiOnStructure(streetWalker, {
       cells,
-      { x: 1, y: 0 },
-      cells[newCoordKey(1, 0)].card.streets[0]
-    )
+      coord: { x: 1, y: 0 },
+      structure: cells[newCoordKey(1, 0)]!.card.streets![0]!,
+    })
   ).toEqual(false);
   expect(
-    isBoiOnStreet(
+    isBoiOnStructure(streetWalker, {
       cells,
-      { x: 1, y: 1 },
-      cells[newCoordKey(1, 1)].card.streets[0]
-    )
+      coord: { x: 1, y: 1 },
+      structure: cells[newCoordKey(1, 1)]!.card.streets![0]!,
+    })
   ).toEqual(false);
   expect(
-    isBoiOnStreet(
+    isBoiOnStructure(streetWalker, {
       cells,
-      { x: 0, y: 1 },
-      cells[newCoordKey(0, 1)].card.streets[0]
-    )
+      coord: { x: 0, y: 1 },
+      structure: cells[newCoordKey(0, 1)]!.card.streets![0]!,
+    })
   ).toEqual(false);
 
-  cells[newCoordKey(1, 0)].claimedPos = {
+  cells[newCoordKey(1, 0)]!.claimedPos = {
     type: "street",
-    position: llrr.streets[0].claimPos,
+    position: llrr.streets![0]!.claimPos,
     playerId: "xd",
   };
 
   expect(
-    isBoiOnStreet(
+    isBoiOnStructure(streetWalker, {
       cells,
-      { x: 1, y: 0 },
-      cells[newCoordKey(1, 0)].card.streets[0]
-    )
+      coord: { x: 1, y: 0 },
+      structure: cells[newCoordKey(1, 0)]!.card.streets![0]!,
+    })
   ).toEqual(true);
   expect(
-    isBoiOnStreet(
+    isBoiOnStructure(streetWalker, {
       cells,
-      { x: 1, y: 1 },
-      cells[newCoordKey(1, 1)].card.streets[0]
-    )
+      coord: { x: 1, y: 1 },
+      structure: cells[newCoordKey(1, 1)]!.card.streets![0]!,
+    })
   ).toEqual(true);
   expect(
-    isBoiOnStreet(
+    isBoiOnStructure(streetWalker, {
       cells,
-      { x: 0, y: 1 },
-      cells[newCoordKey(0, 1)].card.streets[0]
-    )
+      coord: { x: 0, y: 1 },
+      structure: cells[newCoordKey(0, 1)]!.card.streets![0]!,
+    })
   ).toEqual(true);
 });
