@@ -3,11 +3,11 @@ import WebSocket from "ws";
 import express from "express";
 import { createServer } from "http";
 import { processMessage } from "./logic";
-import { liftServerGame, ServerGame } from "./server-game";
+import { ServerLobby } from "./server-lobby";
 import { baseSet } from "./cards";
 
-let sg = new ServerGame();
-sg.newGame([baseSet.cells], [...baseSet.cards]);
+let lobby = new ServerLobby();
+lobby.game.newGame([baseSet.cells], [...baseSet.cards]);
 
 const app = express();
 const server = createServer(app);
@@ -18,7 +18,7 @@ const wss = new WebSocket.Server({
 wss.on("connection", (ws: WebSocket) => {
   console.log("Client connected");
 
-  sg.addClient(ws);
+  lobby.addClient(ws);
 
   updateGame();
 
@@ -29,7 +29,7 @@ wss.on("connection", (ws: WebSocket) => {
       const msg: ClientMessage = JSON.parse(message);
       switch (msg.type) {
         case "join-game":
-          const id = sg.joinGame(ws);
+          const id = lobby.joinGame(ws);
 
           ws.send(
             JSON.stringify(<ServerMessage>{
@@ -39,10 +39,10 @@ wss.on("connection", (ws: WebSocket) => {
           );
           break;
         case "leave-game":
-          sg.leaveGame(ws);
+          lobby.leaveGame(ws);
           break;
         case "try-rejoin-game":
-          if (sg.rejoinGame(ws, msg.id)) {
+          if (lobby.rejoinGame(ws, msg.id)) {
             ws.send(
               JSON.stringify(<ServerMessage>{
                 type: "client-updated",
@@ -52,8 +52,8 @@ wss.on("connection", (ws: WebSocket) => {
           }
           break;
         default:
-          if (sg.currentPlayer.ws === ws) {
-            processMessage(sg, msg);
+          if (lobby.clients.get(ws)?.player === lobby.game.currentPlayer) {
+            processMessage(lobby.game, msg);
           }
       }
       updateGame();
@@ -65,7 +65,7 @@ wss.on("connection", (ws: WebSocket) => {
   ws.on("close", () => {
     console.log("Client disconnected");
 
-    sg.removeClient(ws);
+    lobby.removeClient(ws);
     updateGame();
   });
 });
@@ -77,16 +77,12 @@ server.listen(wsPort, () => {
 function updateGame() {
   const data: ServerMessage = {
     type: "game-updated",
-    game: liftServerGame(sg),
+    game: lobby.toClientGame(),
   };
 
   const json = JSON.stringify(data);
 
-  for (const { ws } of sg.players) {
-    ws.send(json);
-  }
-
-  for (const { ws } of sg.clients) {
+  for (const { ws } of lobby.clients.values()) {
     ws.send(json);
   }
 }

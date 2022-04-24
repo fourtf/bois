@@ -1,18 +1,56 @@
 import {
   addToCoordKey,
+  ClaimPos,
+  ClaimType,
   Coordinate,
   CoordinateKey,
   newCoordKey,
-} from "../shared/shared";
-import { posEquals } from "../shared/util";
-import type { ServerCell } from "./common";
+} from "../../shared/shared";
+import { ifMap, maybeToArray, posEquals } from "../../shared/util";
+import type { ServerCell } from "../common";
 import {
   StructureInfo,
-  reduceStructure,
+  walkStructure,
   streetWalker,
   cityWalker,
   Walker,
-} from "./reduce";
+  lawnWalker,
+} from "./walker";
+
+export function getClaimPositions(
+  cells: Record<string, ServerCell>,
+  coord: Coordinate
+): ClaimPos[] {
+  const mapCP =
+    (type: ClaimType) =>
+      ({ claimPos: position }: { claimPos: [number, number] }): ClaimPos => ({
+        type,
+        position,
+      });
+  const card = cells[newCoordKey(coord)]?.card!;
+
+  return [
+    ...(card.lawns
+      ?.filter(
+        (structure) =>
+          !isBoiOnStructure(lawnWalker, { cells, coord, structure })
+      )
+      ?.map(mapCP("lawn")) ?? []),
+    ...(card.streets
+      ?.filter(
+        (structure) =>
+          !isBoiOnStructure(streetWalker, { cells, coord, structure })
+      )
+      ?.map(mapCP("street")) ?? []),
+    ...(card.cities
+      ?.filter(
+        (structure) =>
+          !isBoiOnStructure(cityWalker, { cells, coord, structure })
+      )
+      ?.map(mapCP("city")) ?? []),
+    ...maybeToArray(ifMap(card.monastery, mapCP("monastery"))),
+  ];
+}
 
 /**
  * @returns points per user gained
@@ -114,7 +152,7 @@ function checkFinishedStructure<StructureT, ConnectionT extends string>(
   walker: Walker<StructureT, ConnectionT>,
   info: StructureInfo<StructureT>
 ) {
-  return reduceStructure(
+  return walkStructure(
     walker,
     info,
     (acc, cell, _coord, street) => {
@@ -146,7 +184,7 @@ export function isBoiOnStructure<T, ConnectionT extends string>(
   walker: Walker<T, ConnectionT>,
   info: StructureInfo<T>
 ): boolean {
-  return reduceStructure(
+  return walkStructure(
     walker,
     info,
     (acc, cell, _coord, street) => {
@@ -159,4 +197,80 @@ export function isBoiOnStructure<T, ConnectionT extends string>(
     },
     { res: false }
   ).res;
+}
+
+/**
+ * Calculates the points gained by a player for structures that weren't finished
+ * at the end of the game.
+ */
+export function getRemainingPoints(
+  cells: Record<CoordinateKey, ServerCell>,
+) {
+
+}
+
+function getRemainingLawnPoints(
+  cells: Record<CoordinateKey, ServerCell>,
+) {
+  const pointsPerPlayer = new Map<string, number>();
+
+  for (const [coordKey, cell] of Object.entries(cells)) {
+    if (cell.claimedPos !== undefined) {
+      const { playerId } = cell.claimedPos;
+      pointsPerPlayer.set(
+        playerId,
+        (pointsPerPlayer.get(playerId) ?? 0) + 1
+      );
+    }
+  }
+
+  return pointsPerPlayer;
+}
+
+function getStructures(
+  cells: Record<CoordinateKey, ServerCell>,
+) {
+  // const streets = new Map<CoordinateKey>();
+
+  // const structures = new Map<string, >();
+  const handledCells = new Set<CoordinateKey>();
+
+  // for (const [coordKey, cell] of Object.entries(cells)) {
+  //   if (cell.card !== undefined) {
+  //     const { streets, cities, monastery } = cell.card;
+
+  //     if (streets !== undefined) {
+  //       for (const structure of streets) {
+  //         walkStructure(streetWalker,
+  //           { cells, coord: cell.coord, structure },
+  //           (acc, cell, coord, street) => {
+              
+  //           });
+
+  //         // structures.set(
+  //         //   coordKey,
+  //         //   structure
+  //         // );
+  //       }
+  //     }
+
+  //     if (cities !== undefined) {
+  //       for (const structure of cities) {
+  //         structures.set(
+  //           newCoordKey(structure.coord),
+  //           structure
+  //         );
+  //       }
+  //     }
+
+  //     if (monastery !== undefined) {
+  //       structures.set(
+  //         newCoordKey(monastery.coord),
+  //         monastery
+  //       );
+  //     }
+  //   }
+  // }
+
+  // return structures;
 }

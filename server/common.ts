@@ -17,11 +17,11 @@ export type ServerPlayer = {
   score: number;
   boisLeft: number;
   isConnected: boolean;
-  ws: WebSocket;
 };
 
 export type ServerClient = {
   ws: WebSocket;
+  player?: ServerPlayer;
 };
 
 export function assertInState<Expected extends State["type"]>(
@@ -30,5 +30,11 @@ export function assertInState<Expected extends State["type"]>(
 ): asserts s is Expected {
   if (s !== expected) {
     throw new Error(`Expected ${s} to equal ${expected}`);
+  }
+}
+
+export function assertTrue(condition: boolean): asserts condition {
+  if (!condition) {
+    throw new Error("Assertion failed");
   }
 }

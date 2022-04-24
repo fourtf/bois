@@ -13,7 +13,7 @@ export function newCoordKey(x: number | Coordinate, y?: number): CoordinateKey {
 
 export function parseCoordKey(coord: CoordinateKey): Coordinate {
   const [x, y] = coord.split("|");
-  return { x: parseInt(x), y: parseInt(y) };
+  return { x: parseInt(x ?? "0"), y: parseInt(y ?? "0") };
 }
 
 export function addToCoordKey(

@@ -4,9 +4,9 @@ import {
   CoordinateKey,
   LawnConnection,
   newCoordKey,
-} from "../shared/shared";
-import type { City, Lawn, Street } from "./cards";
-import type { ServerCell } from "./common";
+} from "../../shared/shared";
+import type { City, Lawn, Street } from "../cards";
+import type { ServerCell } from "../common";
 
 export interface Walker<T, ConnectionT extends string> {
   getTFromConnection: (cell: ServerCell, connectingConn: ConnectionT) => T;
@@ -65,7 +65,7 @@ function getClaimPos(x: { claimPos: [number, number] }): [number, number] {
  *
  * @returns true if the building is finished
  */
-export function reduceStructure<
+export function walkStructure<
   StructureT,
   ConnectionT extends string,
   AccT extends object

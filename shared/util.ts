@@ -49,6 +49,10 @@ export function removeIf<T>(array: T[], predicate: (item: T) => boolean) {
   }
 }
 
+export function removeFromArray<T>(array: T[], item: T) {
+  removeIf(array, (x) => x === item);
+}
+
 export function repeat<T>(t: T, count: number): T[] {
   return Array.from({ length: count }, () => t);
 }

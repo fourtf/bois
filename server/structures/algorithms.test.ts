@@ -1,13 +1,13 @@
-import { newCoordKey } from "../shared/shared";
-import { rotateCard } from "./cards";
+import { newCoordKey } from "../../shared/shared";
+import { rotateCard } from "../cards";
 import {
   checkFinishedStructures,
   isBoiOnStructure,
-} from "./finished-structures";
-import { streetWalker } from "./reduce";
-import { llrr, makeCells } from "./tests";
+} from "./algorithms";
+import { streetWalker } from "./walker";
+import { llrr, makeCells } from "../tests";
 
-test("check-finished-structures", () => {
+test("structure-algorithms", () => {
   const cells = makeCells([
     [llrr, 1, 0, 0],
     [rotateCard(llrr, 90), 1, 1, 0],
@@ -37,7 +37,7 @@ test("check-finished-structures", () => {
   });
 });
 
-test("check-finished-structures-negative", () => {
+test("structure-algorithms-negative", () => {
   const cells = makeCells([
     [llrr, 1, 0, 0],
     [rotateCard(llrr, 90), 1, 1, 0],

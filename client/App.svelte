@@ -278,7 +278,8 @@
     position: absolute;
     z-index: 100;
     top: 16px;
-    width: 100%;
+    margin: 0 16px;
+    width: calc(100% - 32px);
     display: flex;
     justify-content: center;
   }

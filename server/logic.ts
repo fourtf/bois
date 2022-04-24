@@ -1,19 +1,15 @@
 import {
   addToCoordKey,
   CellConnection,
-  ClaimPos,
-  ClaimType,
   ClientMessage,
   Coordinate,
   CoordinateKey,
   newCoordKey,
   parseCoordKey,
 } from "../shared/shared";
-import { ifMap, maybeToArray, uniqueStrings } from "../shared/util";
+import { uniqueStrings } from "../shared/util";
 import { baseSet, Card } from "./cards";
 import type { ServerCell } from "./common";
-import { isBoiOnStructure } from "./finished-structures";
-import { cityWalker, lawnWalker, streetWalker } from "./reduce";
 import type { ServerGame } from "./server-game";
 
 export function processMessage(sg: ServerGame, msg: ClientMessage) {
@@ -105,41 +101,6 @@ function getSurroundingCells(
   );
 
   return x;
-}
-
-export function getClaimPositions(
-  cells: Record<string, ServerCell>,
-  coord: Coordinate
-): ClaimPos[] {
-  const mapCP =
-    (type: ClaimType) =>
-    ({ claimPos: position }: { claimPos: [number, number] }): ClaimPos => ({
-      type,
-      position,
-    });
-  const card = cells[newCoordKey(coord)]?.card!;
-
-  return [
-    ...(card.lawns
-      ?.filter(
-        (structure) =>
-          !isBoiOnStructure(lawnWalker, { cells, coord, structure })
-      )
-      ?.map(mapCP("lawn")) ?? []),
-    ...(card.streets
-      ?.filter(
-        (structure) =>
-          !isBoiOnStructure(streetWalker, { cells, coord, structure })
-      )
-      ?.map(mapCP("street")) ?? []),
-    ...(card.cities
-      ?.filter(
-        (structure) =>
-          !isBoiOnStructure(cityWalker, { cells, coord, structure })
-      )
-      ?.map(mapCP("city")) ?? []),
-    ...maybeToArray(ifMap(card.monastery, mapCP("monastery"))),
-  ];
 }
 
 export function getConnector(card: Card, conn: CellConnection): string {

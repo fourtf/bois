@@ -4,6 +4,7 @@ import { processMessage } from "./logic";
 import { ServerGame } from "./server-game";
 import { defaultCards, defaultCells, llll, llsl } from "./tests";
 import type WebSocket from "ws";
+import { ServerLobby } from "./server-lobby";
 
 test("simple game logic", () => {
   const sg = new ServerGame();
@@ -51,12 +52,13 @@ test("rotation game logic", () => {
 });
 
 test("game logic", () => {
-  const sg = new ServerGame();
+  const lobby = new ServerLobby();
+  const sg = lobby.game;
   let state: State;
 
   const wsMock = {} as WebSocket;
-  sg.addClient(wsMock);
-  sg.joinGame(wsMock);
+  lobby.addClient(wsMock);
+  lobby.joinGame(wsMock);
   sg.newGame(defaultCells, defaultCards);
 
   state = sg.state;
